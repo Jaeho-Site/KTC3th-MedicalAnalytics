@@ -23,11 +23,6 @@ const poolData = {
   ClientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID!
 };
 
-console.log('Cognito Configuration:', {
-  UserPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID,
-  ClientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID
-});
-
 export const userPool = new CognitoUserPool(poolData);
 
 // Cognito 인증 결과 타입 정의
