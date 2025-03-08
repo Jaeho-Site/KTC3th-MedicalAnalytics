@@ -1,3 +1,5 @@
+import Image from 'next/image';
+
 export default function AboutPage() {
   return (
     <div className="min-h-screen">
@@ -48,9 +50,11 @@ export default function AboutPage() {
               </ul>
             </div>
             <div className="relative h-96">
-              <img
+              <Image 
                 src="/images/dbimages.jpg"
                 alt="Our Mission"
+                width={500}
+                height={300}
                 className="rounded-2xl object-cover w-full h-full"
               />
             </div>
@@ -65,9 +69,11 @@ export default function AboutPage() {
           <div className="grid md:grid-cols-3 gap-12">
             <div className="text-center">
               <div className="w-32 h-32 rounded-full bg-teal-100 dark:bg-teal-900 mx-auto mb-6 overflow-hidden">
-                <img
+                <Image
                   src="/images/pill1.jpg"
                   alt="AI Research Lead"
+                  width={128}
+                  height={128}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -78,9 +84,11 @@ export default function AboutPage() {
             </div>
             <div className="text-center">
               <div className="w-32 h-32 rounded-full bg-blue-100 dark:bg-blue-900 mx-auto mb-6 overflow-hidden">
-                <img
+                <Image
                   src="/images/pill2.jpg"
                   alt="Pharmaceutical Expert"
+                  width={128}
+                  height={128}
                   className="w-full h-full object-cover"
                 />
               </div>
@@ -91,9 +99,11 @@ export default function AboutPage() {
             </div>
             <div className="text-center">
               <div className="w-32 h-32 rounded-full bg-cyan-100 dark:bg-cyan-900 mx-auto mb-6 overflow-hidden">
-                <img
+                <Image
                   src="/images/pill4.jpg"
                   alt="Data Scientist"
+                  width={128}
+                  height={128}
                   className="w-full h-full object-cover"
                 />
               </div>

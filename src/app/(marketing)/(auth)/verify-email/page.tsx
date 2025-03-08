@@ -4,15 +4,15 @@ import { Suspense, useEffect } from 'react';
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Button from '@/components/marketing/Button';
-import { cognitoService, CognitoError } from '@/lib/cognito';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
+import { CognitoError } from '@/lib/cognito';
 
 const VerifyEmailContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get('email');
-  const { verifyEmail, tempEmail, tempPassword, clearError } = useAuth();
+  const { verifyEmail, tempEmail, clearError } = useAuth();
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);

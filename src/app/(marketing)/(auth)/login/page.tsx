@@ -2,14 +2,14 @@
 
 import { useState, Suspense, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { cognitoService, CognitoError } from '@/lib/cognito';
+import { useAuth } from '@/contexts/AuthContext';
 import Button from '@/components/marketing/Button';
 import Link from 'next/link';
-import { useAuth } from '@/contexts/AuthContext';
+import { CognitoError } from '@/lib/cognito';
 
 const LoginContent = () => {
   const router = useRouter();
-  const { login, error: authError, clearError } = useAuth();
+  const { login, clearError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');

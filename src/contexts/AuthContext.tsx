@@ -2,17 +2,24 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { cognitoService, CognitoError } from '@/lib/cognito';
+import { ISignUpResult } from 'amazon-cognito-identity-js';
 
+// any 타입을 더 구체적인 타입으로 변경
+interface User {
+  email?: string;
+  username?: string;
+  attributes?: Record<string, string>;
+}
 // 인증 컨텍스트에서 관리할 상태와 함수들의 타입 정의
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
-  user: any | null;
+  user: User | null;
   error: string | null;
   tempEmail: string | null;
   tempPassword: string | null;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string) => Promise<any>;
+  signup: (email: string, password: string) => Promise<ISignUpResult>;
   logout: () => void;
   verifyEmail: (email: string, code: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -31,7 +38,12 @@ const AuthContext = createContext<AuthContextType>({
   tempEmail: null,
   tempPassword: null,
   login: async () => {},
-  signup: async () => {},
+  signup: async () => {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('Signup not implemented in default context');
+    }
+    return {} as ISignUpResult;
+  },
   logout: () => {},
   verifyEmail: async () => {},
   resetPassword: async () => {},
@@ -45,7 +57,7 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState<any | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tempEmail, setTempEmail] = useState<string | null>(null);
   const [tempPassword, setTempPassword] = useState<string | null>(null);
@@ -110,7 +122,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // 회원가입 함수
-  const signup = async (email: string, password: string) => {
+  const signup = async (email: string, password: string): Promise<ISignUpResult> => {
     setIsLoading(true);
     setError(null);
     try {

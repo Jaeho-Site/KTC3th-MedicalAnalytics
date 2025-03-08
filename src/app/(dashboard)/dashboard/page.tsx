@@ -192,7 +192,7 @@ export default function Dashboard() {
         <h2 className="text-2xl font-bold text-gray-800 mb-4">알약 식별 시스템 사용 방법</h2>
         <ol className="list-decimal list-inside space-y-3 pl-2">
           <li className="text-gray-700">알약의 이미지를 촬영하거나 갤러리에서 선택합니다.</li>
-          <li className="text-gray-700">이미지를 업로드한 후 '식별하기' 버튼을 클릭합니다.</li>
+          <li className="text-gray-700">이미지를 업로드한 후 &apos;식별하기&apos; 버튼을 클릭합니다.</li>
           <li className="text-gray-700">시스템이 알약의 특징을 분석하고 유사한 알약을 찾아 결과를 표시합니다.</li>
           <li className="text-gray-700">결과에서 알약의 정보를 확인할 수 있습니다.</li>
         </ol>
