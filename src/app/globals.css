@@ -19,3 +19,45 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* 알약 식별 시스템 스타일 */
+.search-results-table table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin-top: 1rem;
+}
+
+.search-results-table th,
+.search-results-table td {
+  border: 1px solid #e2e8f0;
+  padding: 0.75rem;
+  text-align: left;
+  word-break: break-word;
+}
+
+.search-results-table th {
+  background-color: #f8fafc;
+  font-weight: 600;
+  color: #475569;
+}
+
+.search-results-table tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+.search-results-table tr:hover {
+  background-color: #f1f5f9;
+}
+
+.pill-image {
+  max-width: 100px;
+  max-height: 100px;
+  display: block;
+  margin: 0 auto;
+}
+
+.name {
+  font-weight: 600;
+  color: #1e293b;
+}
