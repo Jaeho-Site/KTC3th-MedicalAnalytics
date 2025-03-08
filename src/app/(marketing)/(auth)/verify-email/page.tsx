@@ -1,45 +1,45 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Button from '@/components/marketing/Button';
 import { cognitoService, CognitoError } from '@/lib/cognito';
+import { useAuth } from '@/contexts/AuthContext';
 
 const VerifyEmailContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get('email');
-  const password = searchParams.get('password');
+  const { verifyEmail, tempEmail, tempPassword, clearError } = useAuth();
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // 컴포넌트 마운트 시 에러 초기화
+  useEffect(() => {
+    clearError();
+  }, [clearError]);
+
+  // URL에서 이메일이 없으면 컨텍스트에서 가져오기
+  const emailToUse = email || tempEmail;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
+    if (!emailToUse) {
+      setError('이메일 정보가 없습니다.');
+      return;
+    }
     
     setLoading(true);
     setError('');
 
     try {
-      console.log('Verifying email with code:', code);
-      await cognitoService.confirmSignUp(email, code);
-      console.log('Email verification successful');
-      
-      // 인증 성공 후 저장된 비밀번호로 자동 로그인
-      try {
-        await cognitoService.signIn(email, password);
-        console.log('Auto sign-in successful');
-        router.push('/dashboard');
-      } catch (signInErr: unknown) {
-        const cognitoError = signInErr as CognitoError;
-        console.error('Auto sign-in failed:', cognitoError);
-        router.push('/login');
-      }
+      await verifyEmail(emailToUse, code);
+      // verifyEmail 함수 내에서 자동 로그인 시도
+      router.push('/dashboard');
     } catch (err: unknown) {
       const cognitoError = err as CognitoError;
-      console.error('Verification Error:', cognitoError);
       setError(cognitoError.message || '인증 코드 확인에 실패했습니다.');
     } finally {
       setLoading(false);

@@ -1,49 +1,32 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { cognitoService } from '@/lib/cognito';
-import { create } from 'zustand';
+import { useAuth } from '@/contexts/AuthContext';
 
-// Zustand store for auth state
-interface AuthStore {
-  isAuthenticated: boolean;
-  setIsAuthenticated: (value: boolean) => void;
+interface ProtectedRouteProps {
+  children: React.ReactNode;
 }
 
-export const useAuthStore = create<AuthStore>((set) => ({
-  isAuthenticated: false,
-  setIsAuthenticated: (value) => set({ isAuthenticated: value }),
-}));
-
-export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
+const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+  const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
-  const { isAuthenticated, setIsAuthenticated } = useAuthStore();
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const session = await cognitoService.getCurrentSession();
-        if (!session) {
-          router.push('/login');
-        } else {
-          setIsAuthenticated(true);
-        }
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        router.push('/login');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    if (!isLoading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, isLoading, router]);
 
-    checkAuth();
-  }, [router, setIsAuthenticated]);
+  if (isLoading) {
+    return <div>로딩 중...</div>;
+  }
 
-  if (isLoading || !isAuthenticated) {
+  if (!isAuthenticated) {
     return null;
   }
 
   return <>{children}</>;
-}
+};
+
+export default ProtectedRoute;

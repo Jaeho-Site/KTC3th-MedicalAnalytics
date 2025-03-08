@@ -1,18 +1,30 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '@/components/marketing/Button';
 import { cognitoService,CognitoError } from '@/lib/cognito';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ResetPasswordContent = () => {
   const router = useRouter();
+  const { resetPassword, confirmResetPassword, tempEmail, clearError } = useAuth();
   const [email, setEmail] = useState('');
   const [step, setStep] = useState<'request' | 'verify'>('request');
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // 컴포넌트 마운트 시 에러 초기화
+  useEffect(() => {
+    clearError();
+    
+    // 컨텍스트에 저장된 이메일이 있으면 사용
+    if (tempEmail) {
+      setEmail(tempEmail);
+    }
+  }, [clearError, tempEmail]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,10 +33,10 @@ const ResetPasswordContent = () => {
 
     try {
       if (step === 'request') {
-        await cognitoService.forgotPassword(email);
+        await resetPassword(email);
         setStep('verify');
       } else {
-        await cognitoService.confirmPassword(email, code, newPassword);
+        await confirmResetPassword(email, code, newPassword);
         router.push('/login');
       }
     } catch (err: unknown) {

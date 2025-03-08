@@ -1,19 +1,26 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Button from '@/components/marketing/Button';
 import Link from 'next/link';
-import { cognitoService, CognitoError } from '@/lib/cognito';
+import { CognitoError } from '@/lib/cognito';
+import { useAuth } from '@/contexts/AuthContext';
 
 const SignUpContent = () => {
   const router = useRouter();
+  const { signup, clearError } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // 컴포넌트 마운트 시 에러 초기화
+  useEffect(() => {
+    clearError();
+  }, [clearError]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -27,45 +34,13 @@ const SignUpContent = () => {
     setLoading(true);
     setError('');
 
-    console.log('Form Submission:', { 
-      email: formData.email,
-      passwordLength: formData.password.length 
-    });
-
     try {
-      console.log('Calling cognitoService.signUp...');
-      const signUpResult = await cognitoService.signUp(
-        formData.email,
-        formData.password
-      );
-      
-      console.log('SignUp Success:', signUpResult);
-      
-      router.push(`/verify-email?email=${encodeURIComponent(formData.email)}&password=${encodeURIComponent(formData.password)}`);
+      await signup(formData.email, formData.password);
+      // 비밀번호는 컨텍스트에 저장되므로 URL에 포함하지 않음
+      router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
     } catch (err: unknown) {
       const cognitoError = err as CognitoError;
-      console.error('SignUp Error Details:', { 
-        code: cognitoError.code,
-        message: cognitoError.message,
-        name: cognitoError.name
-      });
-
-      let errorMessage = '회원가입 중 오류가 발생했습니다.';
-      
-      switch (cognitoError.code) {
-        case 'UsernameExistsException':
-          errorMessage = '이미 등록된 이메일 주소입니다.';
-          break;
-        case 'InvalidPasswordException':
-          errorMessage = '비밀번호는 8자 이상이어야 하며, 숫자와 특수문자를 포함해야 합니다.';
-          break;
-        case 'InvalidParameterException':
-          errorMessage = '입력한 정보가 올바르지 않습니다.';
-          break;
-      }
-      
-      console.log('Setting Error Message:', errorMessage);
-      setError(errorMessage);
+      setError(cognitoError.message || '회원가입 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }

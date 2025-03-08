@@ -1,17 +1,24 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { cognitoService, CognitoError } from '@/lib/cognito';
 import Button from '@/components/marketing/Button';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
 
 const LoginContent = () => {
   const router = useRouter();
+  const { login, error: authError, clearError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // 컴포넌트 마운트 시 에러 초기화
+  useEffect(() => {
+    clearError();
+  }, [clearError]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,16 +26,15 @@ const LoginContent = () => {
     setError('');
 
     try {
-      await cognitoService.signIn(email, password);
+      await login(email, password);
       console.log('Login successful');
       router.push('/dashboard');
       router.refresh();
     } catch (err: unknown) {
       const cognitoError = err as CognitoError;
-      console.error('Login Error:', cognitoError);
       if (cognitoError.code === 'UserNotConfirmedException') {
-        // 이메일 미인증 사용자는 인증 페이지로 리다이렉트
-        router.push(`/verify-email?email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`);
+        // 이메일 미인증 사용자는 인증 페이지로 리다이렉트 (비밀번호는 컨텍스트에 저장됨)
+        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
         return;
       }
       setError(cognitoError.message || '로그인 중 오류가 발생했습니다.');
