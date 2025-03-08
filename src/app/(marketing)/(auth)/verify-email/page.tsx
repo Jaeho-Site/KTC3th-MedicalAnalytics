@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Button from '@/components/marketing/Button';
 import { cognitoService, CognitoError } from '@/lib/cognito';
 import { useAuth } from '@/contexts/AuthContext';
+import Link from 'next/link';
 
 const VerifyEmailContent = () => {
   const router = useRouter();
@@ -47,47 +48,63 @@ const VerifyEmailContent = () => {
   };
 
   return (
-    <div className="max-w-md w-full mx-auto space-y-8">
-      <div>
-        <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-gray-900">
-          이메일 인증
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          이메일로 전송된 인증 코드를 입력해주세요.
-        </p>
-      </div>
-      <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-        {error && (
-          <div className="text-red-500 text-sm text-center bg-red-50 p-3 rounded-md">
-            {error}
-          </div>
-        )}
+    <div className="flex min-h-[calc(100vh-160px)] items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
+      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-lg shadow-md">
         <div>
-          <label htmlFor="code" className="block text-sm font-medium text-gray-700">
-            인증 코드
-          </label>
-          <input
-            id="code"
-            name="code"
-            type="text"
-            required
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            disabled={loading}
-          />
+          <h2 className="text-center text-3xl font-bold tracking-tight text-gray-900">
+            이메일 인증
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            이메일로 전송된 인증 코드를 입력해주세요.
+          </p>
+          {emailToUse && (
+            <p className="mt-1 text-center text-sm font-medium text-gray-800">
+              {emailToUse}
+            </p>
+          )}
         </div>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {error && (
+            <div className="text-red-500 text-sm text-center bg-red-50 p-3 rounded-md">
+              {error}
+            </div>
+          )}
+          <div>
+            <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-1">
+              인증 코드
+            </label>
+            <input
+              id="code"
+              name="code"
+              type="text"
+              required
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+              placeholder="인증 코드 6자리"
+            />
+          </div>
 
-        <Button 
-          type="submit" 
-          variant="primary" 
-          size="large" 
-          className="w-full"
-          disabled={loading}
-        >
-          {loading ? '처리 중...' : '인증하기'}
-        </Button>
-      </form>
+          <div>
+            <Button
+              type="submit"
+              className="group relative w-full"
+              disabled={loading}
+            >
+              {loading ? '인증 중...' : '인증 확인'}
+            </Button>
+          </div>
+          
+          <div className="text-center text-sm">
+            <p className="text-gray-600">
+              인증 코드를 받지 못하셨나요?{' '}
+              <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
+                로그인으로 돌아가기
+              </Link>
+            </p>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
