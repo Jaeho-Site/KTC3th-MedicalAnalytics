@@ -1,13 +1,9 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
 import Image from 'next/image';
 
 export default function Dashboard() {
-  const router = useRouter();
-  const { user } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -76,9 +72,10 @@ export default function Dashboard() {
       setIdentifiedPills(data.identified_pills);
       setResultHtml(data.result_html);
       setShowResults(true);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('분석 오류:', err);
-      setError(err.message || '알약 이미지 분석 중 오류가 발생했습니다. 다시 시도해주세요.');
+      const errorMessage = err instanceof Error ? err.message : '알약 이미지 분석 중 오류가 발생했습니다. 다시 시도해주세요.';
+      setError(errorMessage);
     } finally {
       setAnalyzing(false);
     }
@@ -102,10 +99,13 @@ export default function Dashboard() {
           
           {preview && (
             <div className="my-4 flex justify-center">
-              <img 
+              <Image 
                 src={preview} 
                 alt="이미지 미리보기" 
+                width={300}
+                height={300}
                 className="max-w-[300px] max-h-[300px] object-contain"
+                style={{ width: 'auto', height: 'auto' }}
               />
             </div>
           )}
