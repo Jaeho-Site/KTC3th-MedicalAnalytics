@@ -31,9 +31,12 @@ const DashboardHeader = () => {
             </nav>
           </div>
           <div className="flex items-center">
-            <span className="text-sm text-gray-700 mr-4">
-              {user?.email || '사용자'}
-            </span>
+            <Link href="/mypage" className="text-sm text-gray-700 mr-4 flex items-center hover:text-blue-600">
+              <span className="mr-2">{user?.email || '사용자'}</span>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+              </svg>
+            </Link>
             <button
               onClick={handleLogout}
               className="px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100"
