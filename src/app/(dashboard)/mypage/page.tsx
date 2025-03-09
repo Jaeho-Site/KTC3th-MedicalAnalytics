@@ -7,12 +7,18 @@ import { useAuth } from '@/contexts/AuthContext';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 const USER_API_URL = `${API_BASE_URL}/user`;
 const PROFILE_IMAGE_API_URL = `${API_BASE_URL}/user/profile-image`;
+const GET_IMAGE_API_URL = `${API_BASE_URL}/user/get-image`;
 
 interface UserInfo {
   email: string;
   Username: string;
   joinDate: string;
   profileImage?: string;
+}
+
+interface PresignedUrlInfo {
+  url: string;
+  expiresAt: number; // 만료 시간 (타임스탬프)
 }
 
 // 사용자 이름 검증 함수
@@ -31,9 +37,69 @@ export default function MyPage() {
   const [updateLoading, setUpdateLoading] = useState(false);
   
   // 프로필 이미지 관련 상태
-  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [profileImage, setProfileImage] = useState<string | null>(null); // S3 URL (DynamoDB에 저장됨)
+  const [presignedUrl, setPresignedUrl] = useState<PresignedUrlInfo | null>(null); // PreSignedURL 정보
   const [isUploading, setIsUploading] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // PreSignedURL 가져오기 함수
+  const getPresignedUrl = async (imageUrl: string) => {
+    if (!imageUrl) return null;
+    
+    try {
+      setImageLoading(true);
+      
+      // 인증 토큰 가져오기
+      const token = await getAuthToken();
+      if (!token) {
+        throw new Error('인증 토큰을 가져올 수 없습니다.');
+      }
+      
+      // 이미지 키 추출
+      const imageKey = imageUrl.split('/').pop();
+      if (!imageKey) {
+        throw new Error('이미지 키를 추출할 수 없습니다.');
+      }
+      
+      // API를 통해 PreSignedURL 가져오기
+      const response = await fetch(`${GET_IMAGE_API_URL}?key=${encodeURIComponent(imageKey)}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('PreSignedURL을 가져오는데 실패했습니다.');
+      }
+      
+      const data = await response.json();
+      
+      if (!data.presignedUrl) {
+        throw new Error('PreSignedURL이 없습니다.');
+      }
+      
+      // 현재 시간 + 만료 시간 (초)
+      const expiresAt = Date.now() + (data.expiresIn * 1000);
+      
+      return {
+        url: data.presignedUrl,
+        expiresAt
+      };
+    } catch (err) {
+      console.error('PreSignedURL 가져오기 오류:', err);
+      return null;
+    } finally {
+      setImageLoading(false);
+    }
+  };
+
+  // 이미지 URL이 만료되었는지 확인하는 함수
+  const isUrlExpired = (urlInfo: PresignedUrlInfo | null): boolean => {
+    if (!urlInfo) return true;
+    return Date.now() >= urlInfo.expiresAt;
+  };
 
   // 사용자 정보 가져오기 함수
   const fetchUserInfo = async () => {
@@ -79,6 +145,12 @@ export default function MyPage() {
       // 프로필 이미지가 있으면 설정
       if (data.profileImage) {
         setProfileImage(data.profileImage);
+        
+        // PreSignedURL 가져오기
+        const urlInfo = await getPresignedUrl(data.profileImage);
+        if (urlInfo) {
+          setPresignedUrl(urlInfo);
+        }
       }
     } catch (err) {
       console.error('사용자 정보 조회 오류');
@@ -101,6 +173,33 @@ export default function MyPage() {
       setLoading(false);
     }
   }, [isAuthenticated, user, isLoading]);
+
+  // PreSignedURL 만료 체크 및 갱신
+  useEffect(() => {
+    // 이미지 URL이 있고 PreSignedURL이 만료되었으면 갱신
+    if (profileImage && isUrlExpired(presignedUrl)) {
+      getPresignedUrl(profileImage).then(urlInfo => {
+        if (urlInfo) {
+          setPresignedUrl(urlInfo);
+        }
+      });
+    }
+    
+    // 주기적으로 PreSignedURL 만료 체크 (5분마다)
+    const checkInterval = setInterval(() => {
+      if (profileImage && isUrlExpired(presignedUrl)) {
+        getPresignedUrl(profileImage).then(urlInfo => {
+          if (urlInfo) {
+            setPresignedUrl(urlInfo);
+          }
+        });
+      }
+    }, 5 * 60 * 1000);
+    
+    return () => {
+      clearInterval(checkInterval);
+    };
+  }, [profileImage, presignedUrl]);
 
   // 사용자 정보 업데이트 핸들러
   const handleUpdateUserInfo = async (e: React.FormEvent) => {
@@ -228,8 +327,23 @@ export default function MyPage() {
           console.log('업로드 성공:', data);
           
           if (data.imageUrl) {
-            // 프로필 이미지 상태 업데이트
+            // S3 URL 저장 (DynamoDB에 저장된 URL)
             setProfileImage(data.imageUrl);
+            
+            // PreSignedURL 저장 (실제 이미지 접근에 사용)
+            if (data.presignedUrl) {
+              const expiresAt = Date.now() + (data.expiresIn * 1000);
+              setPresignedUrl({
+                url: data.presignedUrl,
+                expiresAt
+              });
+            } else {
+              // 서버에서 PreSignedURL을 반환하지 않으면 직접 가져오기
+              const urlInfo = await getPresignedUrl(data.imageUrl);
+              if (urlInfo) {
+                setPresignedUrl(urlInfo);
+              }
+            }
             
             // 사용자 정보 업데이트
             setUserInfo(prev => prev ? { ...prev, profileImage: data.imageUrl } : null);
@@ -333,15 +447,18 @@ export default function MyPage() {
               <div className="flex flex-col items-center">
                 <div className="relative">
                   <div className="w-40 h-40 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center border-2 border-blue-500">
-                    {profileImage ? (
-                      // 이미지가 있으면 표시
+                    {imageLoading ? (
+                      // 이미지 로딩 중
+                      <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
+                    ) : presignedUrl?.url ? (
+                      // PreSignedURL이 있으면 이미지 표시
                       <img 
-                        src={profileImage} 
+                        src={presignedUrl.url} 
                         alt="프로필 이미지" 
                         className="w-full h-full object-cover"
                         onError={() => {
-                          // 이미지 로딩 오류 시 이니셜 표시
-                          setProfileImage(null);
+                          // 이미지 로딩 오류 시 PreSignedURL 초기화
+                          setPresignedUrl(null);
                         }}
                       />
                     ) : (
