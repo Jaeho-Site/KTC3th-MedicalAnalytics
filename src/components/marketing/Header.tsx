@@ -14,7 +14,13 @@ const Header = () => {
       const session = await cognitoService.getCurrentSession();
       setIsAuthenticated(!!session);
     } catch (error) {
-      console.error('Auth Check Error:', error);
+      // 개발 환경에서만 상세 오류 로깅
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Auth Check Error:', error instanceof Error ? error.message : 'Unknown error');
+      } else {
+        // 프로덕션에서는 최소한의 정보만 로깅
+        console.error('Authentication check failed');
+      }
       setIsAuthenticated(false);
     }
   };

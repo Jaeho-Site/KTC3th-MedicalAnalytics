@@ -4,6 +4,25 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { cognitoService, CognitoError } from '@/lib/cognito';
 import { ISignUpResult } from 'amazon-cognito-identity-js';
 
+// 안전한 로깅을 위한 유틸리티 함수
+const safeLogError = (message: string, error?: any) => {
+  // 기본 오류 메시지는 항상 로깅
+  console.error(message);
+  
+  // 개발 환경에서만 추가 정보 로깅
+  if (process.env.NODE_ENV === 'development') {
+    // 오류 코드와 메시지만 로깅하고 전체 객체는 로깅하지 않음
+    if (error) {
+      const safeErrorInfo = {
+        code: error.code || 'UNKNOWN_ERROR',
+        name: error.name,
+        message: error.message
+      };
+      console.error('개발 환경 상세 오류:', safeErrorInfo);
+    }
+  }
+};
+
 // JWT 디코딩 함수 (jwt-decode 라이브러리 대체)
 function decodeJwt(token: string) {
   try {
@@ -19,7 +38,7 @@ function decodeJwt(token: string) {
     );
     return JSON.parse(jsonPayload);
   } catch {
-    console.error('JWT 디코딩 오류');
+    safeLogError('JWT 디코딩 오류');
     return null;
   }
 }
@@ -33,7 +52,7 @@ function isTokenExpired(token: string): boolean {
     const currentTime = Date.now() / 1000;
     return decoded.exp < currentTime;
   } catch {
-    console.error('토큰 만료 검증 오류');
+    safeLogError('토큰 만료 검증 오류');
     return true;
   }
 }
@@ -131,13 +150,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             });
             
             if (process.env.NODE_ENV === 'development') {
-              console.log('세션에서 사용자 정보를 가져왔습니다');
+              console.log('세션에서 사용자 정보를 가져왔습니다', {
+                email: payload.email ? `${payload.email.substring(0, 3)}...` : undefined,
+                // 이메일 일부만 표시
+              });
             }
           } else {
             console.error('토큰에서 이메일을 찾을 수 없습니다');
           }
         } catch {
-          console.error('토큰에서 사용자 정보 추출 실패');
+          safeLogError('토큰에서 사용자 정보 추출 실패');
           if (process.env.NODE_ENV === 'development') {
             console.error('상세 오류:');
           }
@@ -147,9 +169,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(null);
       }
     } catch (err) {
-      console.error('인증 상태 확인 오류');
-      if (process.env.NODE_ENV === 'development') {
-        console.error('상세 오류:', err);
+      if (process.env.NODE_ENV === 'production') {
+        // 프로덕션에서는 오류 코드만 로깅
+        console.error('인증 상태 확인 오류', err instanceof Error ? err.name : 'Unknown error');
+      } else {
+        // 개발 환경에서는 더 자세한 정보 로깅
+        safeLogError('인증 상태 확인 오류', err);
       }
       setIsAuthenticated(false);
       setUser(null);
@@ -186,7 +211,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       return null;
     } catch {
-      console.error('인증 토큰 가져오기 오류');
+      safeLogError('인증 토큰 가져오기 오류');
       return null;
     }
   };
@@ -221,10 +246,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (err: unknown) {
       const cognitoError = err as CognitoError;
-      console.error('로그인 오류');
-      if (process.env.NODE_ENV === 'development') {
-        console.error('상세 오류:', cognitoError);
-      }
+      safeLogError('로그인 오류', cognitoError);
       
       if (cognitoError.code === 'UserNotConfirmedException') {
         // 이메일 미인증 사용자는 임시 자격증명 저장
@@ -266,10 +288,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return result;
     } catch (err: unknown) {
       const cognitoError = err as CognitoError;
-      console.error('회원가입 오류');
-      if (process.env.NODE_ENV === 'development') {
-        console.error('상세 오류:', cognitoError);
-      }
+      safeLogError('회원가입 오류', cognitoError);
       
       let errorMessage = '회원가입 중 오류가 발생했습니다.';
       
@@ -326,10 +345,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (err: unknown) {
       const cognitoError = err as CognitoError;
-      console.error('이메일 인증 오류');
-      if (process.env.NODE_ENV === 'development') {
-        console.error('상세 오류:', cognitoError);
-      }
+      safeLogError('이메일 인증 오류', cognitoError);
       setError(cognitoError.message || '인증 코드 확인에 실패했습니다.');
       throw cognitoError;
     } finally {
@@ -357,10 +373,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setTempEmail(email);
     } catch (err: unknown) {
       const cognitoError = err as CognitoError;
-      console.error('비밀번호 재설정 요청 오류');
-      if (process.env.NODE_ENV === 'development') {
-        console.error('상세 오류:', cognitoError);
-      }
+      safeLogError('비밀번호 재설정 요청 오류', cognitoError);
       setError(cognitoError.message || '비밀번호 재설정 요청 중 오류가 발생했습니다.');
       throw cognitoError;
     } finally {
@@ -387,10 +400,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setTempEmail(null);
     } catch (err: unknown) {
       const cognitoError = err as CognitoError;
-      console.error('비밀번호 변경 오류');
-      if (process.env.NODE_ENV === 'development') {
-        console.error('상세 오류:', cognitoError);
-      }
+      safeLogError('비밀번호 변경 오류', cognitoError);
       setError(cognitoError.message || '비밀번호 변경 중 오류가 발생했습니다.');
       throw cognitoError;
     } finally {

@@ -77,10 +77,6 @@ export const cognitoService = {
               return;
             }
             if (result) {
-              console.log('SignUp Success:', {
-                userConfirmed: result.userConfirmed,
-                userSub: result.userSub
-              });
               resolve(result);
             }
           }

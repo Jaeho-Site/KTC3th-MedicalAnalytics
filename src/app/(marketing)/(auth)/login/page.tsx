@@ -26,7 +26,6 @@ const LoginContent = () => {
 
     try {
       await login(email, password);
-      console.log('Login successful');
       router.push('/dashboard');
       router.refresh();
     } catch (err: unknown) {

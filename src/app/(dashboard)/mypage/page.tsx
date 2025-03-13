@@ -138,8 +138,7 @@ export default function MyPage() {
       }
       
       const data = await response.json();
-      console.log('받은 사용자 정보:', data);
-      
+   
       setUserInfo(data);
       setUsername(data.Username || '');
       
@@ -303,8 +302,7 @@ export default function MyPage() {
       reader.onloadend = async () => {
         try {
           const imageData = reader.result;
-          console.log('이미지 업로드 시작...');
-          
+         
           // 이미지 업로드 요청
           const response = await fetch(PROFILE_IMAGE_API_URL, {
             method: 'POST',
@@ -315,17 +313,13 @@ export default function MyPage() {
               email: user.email,
               image: imageData
             })
-          });
-          
-          console.log('업로드 응답 상태:', response.status);
-          
+          });                    
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.message || '이미지 업로드에 실패했습니다.');
           }
           
           const data = await response.json();
-          console.log('업로드 성공:', data);
           
           if (data.imageUrl) {
             // S3 URL 저장 (DynamoDB에 저장된 URL)

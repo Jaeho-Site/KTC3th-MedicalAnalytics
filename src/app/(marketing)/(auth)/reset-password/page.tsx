@@ -41,7 +41,6 @@ const ResetPasswordContent = () => {
       }
     } catch (err: unknown) {
       const cognitoError = err as CognitoError;
-      console.error('Reset Password Error:', cognitoError);
       setError(cognitoError.message || '오류가 발생했습니다.');
     } finally {
       setLoading(false);
