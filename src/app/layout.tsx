@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "웹사이트 빌더",
-  description: "드래그 앤 드롭으로 만드는 전문가급 웹사이트",
+  title: "약 이미지 분석 서비스",
+  description: "약 이미지를 AI가 정밀분석하여 안전한 약 사용을 돕습니다.",
 };
 
 export default function RootLayout({

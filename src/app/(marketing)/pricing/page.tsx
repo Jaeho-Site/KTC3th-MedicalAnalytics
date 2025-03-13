@@ -5,7 +5,7 @@ export default function PricingPage() {
       <div className="text-center mb-16">
         <h1 className="text-4xl font-bold mb-4">합리적인 가격 정책</h1>
         <p className="text-xl text-gray-600 dark:text-gray-400">
-          필요한 만큼만 선택하여 사용하세요
+          많은곳에서 사용되는 pricing디자인만 적용했습니다.
         </p>
       </div>
 
@@ -41,7 +41,7 @@ export default function PricingPage() {
           <div className="bg-gradient-to-br from-teal-500 to-blue-600 text-white rounded-2xl shadow-lg p-8 transform scale-105">
             <h3 className="text-2xl font-semibold mb-4">프로</h3>
             <div className="mb-6">
-              <span className="text-4xl font-bold">₩49,000</span>
+              <span className="text-4xl font-bold">₩9,000</span>
               <span className="text-sm opacity-80">/월</span>
             </div>
             <ul className="space-y-4 mb-8">
