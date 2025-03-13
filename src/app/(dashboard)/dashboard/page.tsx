@@ -70,7 +70,13 @@ export default function Dashboard() {
       
       setPillInfo(data.pill_info);
       setIdentifiedPills(data.identified_pills);
-      setResultHtml(data.result_html);
+      
+      let processedHtml = data.result_html;
+      if (processedHtml) {        
+        processedHtml = processedHtml.replace(/onclick="drugDetail\([^)]*\)"/g, '');          
+        setResultHtml(processedHtml);
+      }
+      
       setShowResults(true);
     } catch (err: unknown) {
       console.error('분석 오류:', err);
@@ -204,3 +210,4 @@ export default function Dashboard() {
     </div>
   );
 }
+
