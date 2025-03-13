@@ -117,7 +117,11 @@ export default function Home() {
                   />
                 </div>
                 <div className="p-6">
-                  <h3 className="text-lg font-semibold mb-2">분석 사례 {pill}</h3>
+                  <h3 className="text-lg font-semibold mb-2">
+                    {pill === 1 ? 'BT 각인 원형 흰색 알약 분석' : 
+                     pill === 2 ? 'TYLENOL 각인 타원형 흰색 알약 분석' : 
+                     'GD 각인 마름모형 분홍색 알약 분석'}
+                  </h3>
                   <p className="text-gray-600 dark:text-gray-400 mb-4">
                     실제 의약품 분석 결과를 확인해보세요
                   </p>
@@ -130,6 +134,14 @@ export default function Home() {
                 </div>
               </div>
             ))}
+          </div>
+          <div className="text-center mt-12">
+            <Link
+              href="/examples"
+              className="px-6 py-3 rounded-full border border-teal-600 text-teal-600 font-medium hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-colors inline-block"
+            >
+              모든 분석 사례 보기
+            </Link>
           </div>
         </div>
       </section>
