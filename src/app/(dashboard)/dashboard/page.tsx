@@ -49,11 +49,17 @@ export default function Dashboard() {
     setShowResults(false);
 
     try {
-      // 로컬 API 라우트로 요청 전송
       const formData = new FormData();
       formData.append('image', file);
 
-      const response = await fetch('/api/identify', {
+      // 직접 API Gateway 호출 (클라이언트 측 코드)
+      const apiUrl = process.env.NEXT_PUBLIC_PILL_IDENTIFIER_API_URL;
+      
+      if (!apiUrl) {
+        throw new Error('API URL이 설정되지 않았습니다.');
+      }
+      
+      const response = await fetch(`${apiUrl}/identify`, {
         method: 'POST',
         body: formData
       });
