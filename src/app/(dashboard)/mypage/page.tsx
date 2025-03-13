@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import Image from 'next/image';
 
 // API 엔드포인트 - 환경 변수 사용
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -45,7 +44,7 @@ export default function MyPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // PreSignedURL 가져오기 함수
-  const getPresignedUrl = useCallback(async (imageUrl: string) => {
+  const getPresignedUrl = async (imageUrl: string) => {
     if (!imageUrl) return null;
     
     try {
@@ -94,16 +93,16 @@ export default function MyPage() {
     } finally {
       setImageLoading(false);
     }
-  }, [getAuthToken]);
+  };
 
   // 이미지 URL이 만료되었는지 확인하는 함수
-  const isUrlExpired = useCallback((urlInfo: PresignedUrlInfo | null): boolean => {
+  const isUrlExpired = (urlInfo: PresignedUrlInfo | null): boolean => {
     if (!urlInfo) return true;
     return Date.now() >= urlInfo.expiresAt;
-  }, []);
+  };
 
   // 사용자 정보 가져오기 함수
-  const fetchUserInfo = useCallback(async () => {
+  const fetchUserInfo = async () => {
     if (!isAuthenticated || !user?.email) {
       setLoading(false);
       return;
@@ -164,7 +163,7 @@ export default function MyPage() {
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, user, getAuthToken, getPresignedUrl]);
+  };
 
   // 초기 데이터 로드
   useEffect(() => {
@@ -173,7 +172,7 @@ export default function MyPage() {
     } else if (!isLoading) {
       setLoading(false);
     }
-  }, [isAuthenticated, user, isLoading, fetchUserInfo]);
+  }, [isAuthenticated, user, isLoading]);
 
   // PreSignedURL 만료 체크 및 갱신
   useEffect(() => {
@@ -200,7 +199,7 @@ export default function MyPage() {
     return () => {
       clearInterval(checkInterval);
     };
-  }, [profileImage, presignedUrl, getPresignedUrl, isUrlExpired]);
+  }, [profileImage, presignedUrl]);
 
   // 사용자 정보 업데이트 핸들러
   const handleUpdateUserInfo = async (e: React.FormEvent) => {
@@ -453,12 +452,10 @@ export default function MyPage() {
                       <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
                     ) : presignedUrl?.url ? (
                       // PreSignedURL이 있으면 이미지 표시
-                      <Image 
+                      <img 
                         src={presignedUrl.url} 
                         alt="프로필 이미지" 
                         className="w-full h-full object-cover"
-                        width={160}
-                        height={160}
                         onError={() => {
                           // 이미지 로딩 오류 시 PreSignedURL 초기화
                           setPresignedUrl(null);
@@ -550,37 +547,6 @@ export default function MyPage() {
                     >
                       사용자 이름 수정
                     </button>
-                    
-                    {/* 바로가기 링크 섹션 */}
-                    <div className="mt-6">
-                      <h3 className="text-lg font-medium text-gray-700 mb-2">바로가기 링크</h3>
-                      <div className="flex flex-wrap gap-3">
-                        <a 
-                          href="https://kdt.programmers.co.kr" 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition-colors"
-                        >
-                          카테캠
-                        </a>
-                        <a 
-                          href="https://aws.amazon.com/ko/dynamodb/" 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 transition-colors"
-                        >
-                          DB
-                        </a>
-                        <a 
-                          href="https://openai.com" 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-colors"
-                        >
-                          AI
-                        </a>
-                      </div>
-                    </div>
                   </>
                 )}
               </div>
