@@ -12,7 +12,8 @@ const SignUpContent = () => {
   const { signup, clearError } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
+    confirmPassword: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,6 +34,13 @@ const SignUpContent = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    // 비밀번호 일치 여부 확인
+    if (formData.password !== formData.confirmPassword) {
+      setError('비밀번호가 일치하지 않습니다.');
+      setLoading(false);
+      return;
+    }
 
     try {
       await signup(formData.email, formData.password);
@@ -66,7 +74,7 @@ const SignUpContent = () => {
               {error}
             </div>
           )}
-          <div className="rounded-md -space-y-px">
+          <div className="rounded-md space-y-4">
             <div className="mb-4">
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                 이메일
@@ -83,7 +91,7 @@ const SignUpContent = () => {
                 placeholder="이메일 주소"
               />
             </div>
-            <div>
+            <div className="mb-4">
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                 비밀번호
               </label>
@@ -99,13 +107,32 @@ const SignUpContent = () => {
                 placeholder="비밀번호 (8자 이상, 숫자와 특수문자 포함)"
               />
             </div>
+            <div className="mb-4">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+                비밀번호 재확인
+              </label>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                autoComplete="new-password"
+                required
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder="비밀번호 재입력"
+              />
+              {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                <p className="text-red-500 text-xs mt-1">비밀번호가 일치하지 않습니다.</p>
+              )}
+            </div>
           </div>
 
           <div>
             <Button
               type="submit"
               className="group relative w-full"
-              disabled={loading}
+              disabled={loading || (formData.password !== formData.confirmPassword && formData.confirmPassword !== '')}
             >
               {loading ? '처리 중...' : '회원가입'}
             </Button>
