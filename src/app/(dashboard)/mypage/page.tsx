@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import Image from 'next/image';
 
 // API 엔드포인트 - 환경 변수 사용
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -44,7 +45,7 @@ export default function MyPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // PreSignedURL 가져오기 함수
-  const getPresignedUrl = async (imageUrl: string) => {
+  const getPresignedUrl = useCallback(async (imageUrl: string) => {
     if (!imageUrl) return null;
     
     try {
@@ -93,16 +94,16 @@ export default function MyPage() {
     } finally {
       setImageLoading(false);
     }
-  };
+  }, [getAuthToken]);
 
   // 이미지 URL이 만료되었는지 확인하는 함수
-  const isUrlExpired = (urlInfo: PresignedUrlInfo | null): boolean => {
+  const isUrlExpired = useCallback((urlInfo: PresignedUrlInfo | null): boolean => {
     if (!urlInfo) return true;
     return Date.now() >= urlInfo.expiresAt;
-  };
+  }, []);
 
   // 사용자 정보 가져오기 함수
-  const fetchUserInfo = async () => {
+  const fetchUserInfo = useCallback(async () => {
     if (!isAuthenticated || !user?.email) {
       setLoading(false);
       return;
@@ -163,7 +164,7 @@ export default function MyPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAuthenticated, user, getAuthToken, getPresignedUrl]);
 
   // 초기 데이터 로드
   useEffect(() => {
@@ -172,7 +173,7 @@ export default function MyPage() {
     } else if (!isLoading) {
       setLoading(false);
     }
-  }, [isAuthenticated, user, isLoading]);
+  }, [isAuthenticated, user, isLoading, fetchUserInfo]);
 
   // PreSignedURL 만료 체크 및 갱신
   useEffect(() => {
@@ -199,7 +200,7 @@ export default function MyPage() {
     return () => {
       clearInterval(checkInterval);
     };
-  }, [profileImage, presignedUrl]);
+  }, [profileImage, presignedUrl, getPresignedUrl, isUrlExpired]);
 
   // 사용자 정보 업데이트 핸들러
   const handleUpdateUserInfo = async (e: React.FormEvent) => {
@@ -452,10 +453,12 @@ export default function MyPage() {
                       <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
                     ) : presignedUrl?.url ? (
                       // PreSignedURL이 있으면 이미지 표시
-                      <img 
+                      <Image 
                         src={presignedUrl.url} 
                         alt="프로필 이미지" 
                         className="w-full h-full object-cover"
+                        width={160}
+                        height={160}
                         onError={() => {
                           // 이미지 로딩 오류 시 PreSignedURL 초기화
                           setPresignedUrl(null);
