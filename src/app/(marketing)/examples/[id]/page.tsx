@@ -90,15 +90,27 @@ const analysisExamples = [
   },
 ];
 
+// 분석 사례 타입 정의
+interface AnalysisExample {
+  id: string;
+  title: string;
+  image: string;
+  pillImage?: string;
+  date: string;
+  author: string;
+  content: string;
+  resultImage?: string;
+}
+
 export default function AnalysisExample() {
   const params = useParams();
-  const [example, setExample] = useState<any>(null);
+  const [example, setExample] = useState<AnalysisExample | null>(null);
   
   useEffect(() => {
     // ID에 해당하는 분석 사례 찾기
     const id = params.id as string;
     const foundExample = analysisExamples.find(ex => ex.id === id);
-    setExample(foundExample);
+    setExample(foundExample || null);
   }, [params.id]);
 
   if (!example) {
@@ -123,10 +135,12 @@ export default function AnalysisExample() {
         
         <article className="bg-white dark:bg-gray-900 rounded-xl shadow-lg overflow-hidden max-w-4xl mx-auto">
           <div className="aspect-video relative bg-gray-100 dark:bg-gray-800">
-            <img
+            <Image
               src={example.image}
               alt={example.title}
-              className="w-full h-full object-cover"
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 768px"
             />
           </div>
           
@@ -135,11 +149,13 @@ export default function AnalysisExample() {
             
             {example.pillImage && (
               <div className="mb-6 flex justify-center">
-                <div className="w-32 h-32 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden border border-gray-200">
-                  <img
+                <div className="w-32 h-32 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden border border-gray-200 relative">
+                  <Image
                     src={example.pillImage}
                     alt="알약 이미지"
-                    className="w-full h-full object-contain"
+                    fill
+                    className="object-contain"
+                    sizes="128px"
                   />
                 </div>
               </div>
@@ -169,11 +185,13 @@ export default function AnalysisExample() {
               })}
               
               {example.resultImage && (
-                <div className="mt-8">
-                  <img
+                <div className="mt-8 relative">
+                  <Image
                     src={example.resultImage}
                     alt="상세 검색 결과"
-                    className="w-full rounded-lg border border-gray-200"
+                    width={1200}
+                    height={800}
+                    className="rounded-lg border border-gray-200 w-full h-auto"
                   />
                 </div>
               )}

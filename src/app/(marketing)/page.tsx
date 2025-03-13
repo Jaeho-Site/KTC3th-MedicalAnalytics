@@ -1,6 +1,7 @@
 'use client';
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { cognitoService } from "@/lib/cognito";
 
@@ -59,9 +60,11 @@ export default function Home() {
           <div className="grid md:grid-cols-3 gap-12">
             <div className="text-center">
               <div className="bg-teal-100 dark:bg-teal-900 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <img
+                <Image
                   src="/images/pill4.jpg"
                   alt="AI Analysis"
+                  width={32}
+                  height={32}
                   className="w-8 h-8 dark:invert"
                 />
               </div>
@@ -72,9 +75,11 @@ export default function Home() {
             </div>
             <div className="text-center">
               <div className="bg-blue-100 dark:bg-blue-900 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <img
+                <Image
                   src="/images/dbimages.jpg"
                   alt="Database"
+                  width={32}
+                  height={32}
                   className="w-8 h-8 dark:invert"
                 />
               </div>
@@ -85,9 +90,11 @@ export default function Home() {
             </div>
             <div className="text-center">
               <div className="bg-cyan-100 dark:bg-cyan-900 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <img
+                <Image
                   src="/images/dna.jpg"
                   alt="Reports"
+                  width={32}
+                  height={32}
                   className="w-8 h-8 dark:invert"
                 />
               </div>
@@ -110,10 +117,12 @@ export default function Home() {
             {[1, 2, 3].map((pill) => (
               <div key={pill} className="bg-white dark:bg-gray-900 rounded-xl shadow-lg overflow-hidden">
                 <div className="aspect-video relative bg-gray-100 dark:bg-gray-800">
-                  <img
+                  <Image
                     src={`/images/pill${pill}.jpg`}
                     alt={`Analysis Example ${pill}`}
-                    className="w-full h-full object-cover"
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 400px"
                   />
                 </div>
                 <div className="p-6">

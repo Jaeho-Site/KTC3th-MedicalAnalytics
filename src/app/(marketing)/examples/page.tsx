@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 
 // 분석 사례 데이터 (실제로는 API나 데이터베이스에서 가져올 수 있습니다)
 const analysisExamples = [
@@ -48,10 +49,12 @@ export default function AnalysisExamples() {
           {analysisExamples.map((example) => (
             <div key={example.id} className="bg-white dark:bg-gray-900 rounded-xl shadow-lg overflow-hidden">
               <div className="aspect-video relative bg-gray-100 dark:bg-gray-800">
-                <img
+                <Image
                   src={example.image}
                   alt={example.title}
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 400px"
                 />
               </div>
               <div className="p-6">
