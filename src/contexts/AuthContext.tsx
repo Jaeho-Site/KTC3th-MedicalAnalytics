@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { cognitoService, CognitoError } from '@/lib/cognito';
 import { ISignUpResult } from 'amazon-cognito-identity-js';
 
@@ -18,7 +18,7 @@ function decodeJwt(token: string) {
         .join('')
     );
     return JSON.parse(jsonPayload);
-  } catch (error) {
+  } catch {
     console.error('JWT 디코딩 오류');
     return null;
   }
@@ -32,7 +32,7 @@ function isTokenExpired(token: string): boolean {
     
     const currentTime = Date.now() / 1000;
     return decoded.exp < currentTime;
-  } catch (error) {
+  } catch {
     console.error('토큰 만료 검증 오류');
     return true;
   }
@@ -100,65 +100,65 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [tempPassword, setTempPassword] = useState<string | null>(null);
 
   // 초기 인증 상태 확인
-  useEffect(() => {
-    const checkAuthStatus = async () => {
-      try {
-        const session = await cognitoService.getCurrentSession();
-        if (session) {
-          // 토큰 만료 검증
-          const idToken = session.getIdToken().getJwtToken();
-          if (isTokenExpired(idToken)) {
-            console.log('토큰이 만료되었습니다. 다시 로그인이 필요합니다.');
-            setIsAuthenticated(false);
-            setUser(null);
-            setIsLoading(false);
-            return;
-          }
-          
-          setIsAuthenticated(true);
-          
-          // 세션에서 사용자 정보 추출
-          try {
-            const payload = decodeJwt(idToken);
-            if (payload && payload.email) {
-              // 사용자 정보 설정
-              setUser({
-                email: payload.email,
-                username: payload.email.split('@')[0],
-                attributes: {
-                  sub: payload.sub,
-                  email: payload.email
-                }
-              });
-              
-              if (process.env.NODE_ENV === 'development') {
-                console.log('세션에서 사용자 정보를 가져왔습니다');
-              }
-            } else {
-              console.error('토큰에서 이메일을 찾을 수 없습니다');
-            }
-          } catch (error) {
-            console.error('토큰에서 사용자 정보 추출 실패');
-            if (process.env.NODE_ENV === 'development') {
-              console.error('상세 오류:', error);
-            }
-          }
-        } else {
+  const checkAuthStatus = useCallback(async () => {
+    try {
+      const session = await cognitoService.getCurrentSession();
+      if (session) {
+        // 토큰 만료 검증
+        const idToken = session.getIdToken().getJwtToken();
+        if (isTokenExpired(idToken)) {
+          console.log('토큰이 만료되었습니다. 다시 로그인이 필요합니다.');
           setIsAuthenticated(false);
           setUser(null);
+          setIsLoading(false);
+          return;
         }
-      } catch (err) {
-        console.error('인증 상태 확인 오류');
-        if (process.env.NODE_ENV === 'development') {
-          console.error('상세 오류:', err);
+        
+        setIsAuthenticated(true);
+        
+        // 세션에서 사용자 정보 추출
+        try {
+          const payload = decodeJwt(idToken);
+          if (payload && payload.email) {
+            // 사용자 정보 설정
+            setUser({
+              email: payload.email,
+              username: payload.email.split('@')[0],
+              attributes: {
+                sub: payload.sub,
+                email: payload.email
+              }
+            });
+            
+            if (process.env.NODE_ENV === 'development') {
+              console.log('세션에서 사용자 정보를 가져왔습니다');
+            }
+          } else {
+            console.error('토큰에서 이메일을 찾을 수 없습니다');
+          }
+        } catch {
+          console.error('토큰에서 사용자 정보 추출 실패');
+          if (process.env.NODE_ENV === 'development') {
+            console.error('상세 오류:');
+          }
         }
+      } else {
         setIsAuthenticated(false);
         setUser(null);
-      } finally {
-        setIsLoading(false);
       }
-    };
+    } catch (err) {
+      console.error('인증 상태 확인 오류');
+      if (process.env.NODE_ENV === 'development') {
+        console.error('상세 오류:', err);
+      }
+      setIsAuthenticated(false);
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
+  useEffect(() => {
     checkAuthStatus();
 
     // 인증 상태 변경 이벤트 리스너
@@ -170,7 +170,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       window.removeEventListener('auth-change', handleAuthChange);
     };
-  }, []);
+  }, [checkAuthStatus]);
 
   // 인증 토큰 가져오기 함수
   const getAuthToken = async (): Promise<string | null> => {
@@ -185,7 +185,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return idToken;
       }
       return null;
-    } catch (error) {
+    } catch {
       console.error('인증 토큰 가져오기 오류');
       return null;
     }
@@ -207,7 +207,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         throw new Error('유효한 이메일 주소를 입력해주세요.');
       }
       
-      const authResult = await cognitoService.signIn(email, password);
+      await cognitoService.signIn(email, password);
       setIsAuthenticated(true);
       
       // 사용자 정보 설정
