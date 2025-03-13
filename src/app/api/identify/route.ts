@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       );
     } 
     // API Gateway로 요청 전달
-    const response = await fetch(apiUrl, {
+    const response = await fetch(`${apiUrl}/identify`, {
       method: 'POST',
       body: formData,
     });
