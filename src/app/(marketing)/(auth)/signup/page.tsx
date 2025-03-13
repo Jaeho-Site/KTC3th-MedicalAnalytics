@@ -2,7 +2,6 @@
 
 import { useState, Suspense, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Button from '@/components/marketing/Button';
 import Link from 'next/link';
 import { CognitoError } from '@/lib/cognito';
 import { useAuth } from '@/contexts/AuthContext';

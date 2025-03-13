@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import Image from 'next/image';
 
 // API 엔드포인트 - 환경 변수 사용
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -452,10 +453,12 @@ export default function MyPage() {
                       <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
                     ) : presignedUrl?.url ? (
                       // PreSignedURL이 있으면 이미지 표시
-                      <img 
+                      <Image 
                         src={presignedUrl.url} 
                         alt="프로필 이미지" 
                         className="w-full h-full object-cover"
+                        width={160}
+                        height={160}
                         onError={() => {
                           // 이미지 로딩 오류 시 PreSignedURL 초기화
                           setPresignedUrl(null);
