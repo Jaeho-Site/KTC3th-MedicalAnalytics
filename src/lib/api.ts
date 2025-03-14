@@ -1,5 +1,17 @@
 // API 요청을 위한 유틸리티 함수
 
+// 안전한 로깅을 위한 유틸리티 함수
+const safeLogError = (message: string, error?: Error | unknown) => {
+  // 프로덕션 환경에서는 최소한의 오류 정보만 로깅
+  if (process.env.NODE_ENV === 'production') {
+    console.error(message);
+    return;
+  }
+  
+  // 개발 환경에서는 더 자세한 정보 로깅
+  console.error(message, error);
+};
+
 /**
  * 인증이 필요한 API 요청을 보내는 함수
  * HttpOnly 쿠키에 저장된 토큰이 자동으로 요청에 포함됨
@@ -44,11 +56,11 @@ export async function fetchWithAuth(url: string, options: RequestInit = {}) {
   } catch (error) {
     // 네트워크 오류 처리
     if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-      console.error('네트워크 연결 오류:', error);
+      safeLogError('네트워크 연결 오류', error);
       throw new Error('서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.');
     }
     
-    console.error('API 요청 오류:', error);
+    safeLogError('API 요청 오류', error);
     throw error;
   }
 }

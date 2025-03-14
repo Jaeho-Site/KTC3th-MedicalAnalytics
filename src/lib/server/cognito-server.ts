@@ -1,6 +1,18 @@
 import { CognitoUserPool, CognitoUser, AuthenticationDetails, CognitoUserAttribute, ISignUpResult } from 'amazon-cognito-identity-js';
 import { CognitoJwtVerifier } from 'aws-jwt-verify';
 
+// 안전한 로깅을 위한 유틸리티 함수
+const safeLogError = (message: string, error?: Error | unknown) => {
+  // 프로덕션 환경에서는 최소한의 오류 정보만 로깅
+  if (process.env.NODE_ENV === 'production') {
+    console.error(message);
+    return;
+  }
+  
+  // 개발 환경에서는 더 자세한 정보 로깅
+  console.error(message, error);
+};
+
 // 서버 측에서만 사용되는 환경 변수
 const poolData = {
   UserPoolId: process.env.COGNITO_USER_POOL_ID!,
@@ -24,7 +36,7 @@ export async function verifyToken(token: string) {
     const payload = await verifier.verify(token);
     return { valid: true, payload };
   } catch (error) {
-    console.error('Token verification failed:', error);
+    safeLogError('Token verification failed', error);
     return { valid: false, error };
   }
 }
@@ -87,11 +99,16 @@ export const cognitoServerService = {
           [],
           (err: Error | undefined, result?: ISignUpResult) => {
             if (err) {
-              console.error('SignUp Error:', {
-                code: (err as any).code,
-                message: err.message,
-                name: err.name
-              });
+              // 프로덕션 환경에서는 민감한 정보 로깅 제한
+              if (process.env.NODE_ENV === 'development') {
+                console.error('SignUp Error:', {
+                  code: (err as any).code,
+                  message: err.message,
+                  name: err.name
+                });
+              } else {
+                console.error('SignUp Error:', (err as any).code || err.name);
+              }
               reject(err);
               return;
             }
@@ -101,7 +118,7 @@ export const cognitoServerService = {
           }
         );
       } catch (err) {
-        console.error('SignUp Exception:', err);
+        safeLogError('SignUp Exception', err);
         reject(err);
       }
     });
@@ -125,7 +142,7 @@ export const cognitoServerService = {
           resolve(result);
         },
         onFailure: (err) => {
-          console.error('Authentication failed:', err);
+          safeLogError('Authentication failed', err);
           reject(err);
         }
       });
@@ -180,7 +197,7 @@ export const cognitoServerService = {
 
       cognitoUser.confirmRegistration(code, true, (err, result) => {
         if (err) {
-          console.error('Confirmation Error:', err);
+          safeLogError('Confirmation Error', err);
           reject(err);
           return;
         }

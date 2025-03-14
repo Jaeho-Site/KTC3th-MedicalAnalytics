@@ -5,6 +5,12 @@ import { AuthError, User, SignUpResult } from '@/lib/auth-types';
 
 // 안전한 로깅을 위한 유틸리티 함수
 const safeLogError = (message: string, error?: Error | unknown) => {
+  // 프로덕션 환경에서는 최소한의 오류 정보만 로깅
+  if (process.env.NODE_ENV === 'production') {
+    console.error(message);
+    return;
+  }
+  
   // 기본 오류 메시지는 항상 로깅
   console.error(message);
   
@@ -73,9 +79,6 @@ const AuthContext = createContext<AuthContextType>({
   tempEmail: null,
   login: async () => {},
   signup: async () => {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('Signup not implemented in default context');
-    }
     return {} as SignUpResult;
   },
   logout: () => {},
@@ -133,13 +136,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(null);
       }
     } catch (err) {
-      if (process.env.NODE_ENV === 'production') {
-        // 프로덕션에서는 오류 코드만 로깅
-        console.error('인증 상태 확인 오류', err instanceof Error ? err.name : 'Unknown error');
-      } else {
-        // 개발 환경에서는 더 자세한 정보 로깅
-        safeLogError('인증 상태 확인 오류', err);
-      }
+      safeLogError('인증 상태 확인 오류', err);
       setIsAuthenticated(false);
       setUser(null);
     } finally {
@@ -158,10 +155,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       // 인증 토큰 쿠키 삭제
       document.cookie = 'authToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.log('인증 토큰 쿠키가 삭제되었습니다.');
-      }
       
       setIsAuthenticated(false);
       setUser(null);
@@ -245,25 +238,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       // 토큰이 응답에 포함되어 있으면 쿠키에 저장
       if (data.token) {
-        // 클라이언트 측에서 쿠키 설정 (개발 환경에서만 로깅)
-        if (process.env.NODE_ENV === 'development') {
-          console.log('인증 토큰을 쿠키에 저장합니다.');
-        }
-        
-        // 쿠키 만료 시간 설정 (예: 1일)
         const expirationDate = new Date();
         expirationDate.setDate(expirationDate.getDate() + 1);
         
-        // 쿠키 설정
-        document.cookie = `authToken=${data.token}; expires=${expirationDate.toUTCString()}; path=/; SameSite=Lax`;
-        
-        if (process.env.NODE_ENV === 'development') {
-          console.log('쿠키 설정 완료:', document.cookie);
-        }
-      } else {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('응답에 토큰이 포함되어 있지 않습니다:', data);
-        }
+        // 쿠키 설정 - SameSite=Strict로 변경하여 CSRF 방지 강화
+        document.cookie = `authToken=${data.token}; expires=${expirationDate.toUTCString()}; path=/; SameSite=Strict`;
       }
       
       setIsAuthenticated(true);
@@ -277,9 +256,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // 인증 상태 변경 이벤트 발생
       window.dispatchEvent(new Event('auth-change'));
       
-      if (process.env.NODE_ENV === 'development') {
-        console.log('로그인 성공, 사용자 정보 설정');
-      }
     } catch (err: unknown) {
       const authError = err as AuthError;
       safeLogError('로그인 오류', authError);
