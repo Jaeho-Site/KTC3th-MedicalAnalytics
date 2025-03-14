@@ -9,7 +9,15 @@ const safeLogError = (message: string, error?: Error | unknown) => {
   }
   
   // 개발 환경에서는 더 자세한 정보 로깅
-  console.error(message, error);
+  if (error instanceof Error) {
+    console.error(message, {
+      name: error.name,
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+  } else {
+    console.error(message, error);
+  }
 };
 
 /**

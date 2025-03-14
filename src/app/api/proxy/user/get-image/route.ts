@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
     
     // 성공 응답 반환
     return NextResponse.json(data);
-  } catch (error) {
+  } catch  {
     return NextResponse.json(
       { message: '서버 오류가 발생했습니다.' },
       { status: 500 }

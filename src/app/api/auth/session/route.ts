@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
         sub: payload.sub
       }
     });
-  } catch (error) {
+  } catch{
     return NextResponse.json(
       { isAuthenticated: false, message: '세션 확인 중 오류가 발생했습니다.' },
       { status: 500 }

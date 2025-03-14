@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     // 응답 객체 생성
     const response = NextResponse.json({
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     });
     
     return response;
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, message: '로그아웃 중 오류가 발생했습니다.' },
       { status: 500 }

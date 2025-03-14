@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function Home() {

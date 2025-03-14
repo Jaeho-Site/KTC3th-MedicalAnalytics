@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     });
     
     return response;
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: '쿠키 설정 중 오류가 발생했습니다.' },
       { status: 500 }

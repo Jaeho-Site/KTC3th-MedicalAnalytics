@@ -30,7 +30,7 @@ export function validateAuthToken(request: NextRequest): { valid: boolean; respo
 /**
  * API 요청 전송
  */
-export async function sendApiRequest(url: string, options: RequestInit, authToken?: string): Promise<{ data: any; response: Response }> {
+export async function sendApiRequest(url: string, options: RequestInit, authToken?: string): Promise<{ data: Record<string, unknown> | null; response: Response }> {
   try {
     // 헤더 설정
     const headers: Record<string, string> = {
@@ -49,7 +49,7 @@ export async function sendApiRequest(url: string, options: RequestInit, authToke
     });
     
     // 응답 데이터 가져오기
-    let data;
+    let data: Record<string, unknown> | null;
     try {
       data = await response.json();
     } catch (error) {
@@ -74,7 +74,7 @@ export async function sendApiRequest(url: string, options: RequestInit, authToke
 /**
  * 오류 응답 생성
  */
-export function createErrorResponse(error: unknown, defaultMessage: string = '서버 오류가 발생했습니다.'): NextResponse {
+export function createErrorResponse(error: Error | unknown, defaultMessage: string = '서버 오류가 발생했습니다.'): NextResponse {
   // 프로덕션 환경에서는 최소한의 오류 정보만 로깅
   if (process.env.NODE_ENV === 'development') {
     console.error(`API 오류: ${defaultMessage}`, error);
@@ -98,7 +98,7 @@ export function createErrorResponse(error: unknown, defaultMessage: string = '�
 /**
  * 응답 처리
  */
-export function handleApiResponse(data: any, response: Response, errorMessage: string): NextResponse {
+export function handleApiResponse(data: Record<string, unknown> | null, response: Response, errorMessage: string): NextResponse {
   if (!response.ok) {
     return NextResponse.json(
       data || { message: errorMessage },

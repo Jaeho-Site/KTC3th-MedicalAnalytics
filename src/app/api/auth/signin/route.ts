@@ -40,24 +40,34 @@ export async function POST(request: NextRequest) {
     });
     
     return response;
-  } catch (error: any) {    
+  } catch (error: unknown) {    
     // 에러 메시지 처리
     let errorMessage = '로그인 중 오류가 발생했습니다.';
     let statusCode = 500;
     
-    if (error.code === 'UserNotConfirmedException') {
-      errorMessage = '이메일 인증이 필요합니다.';
-      statusCode = 401;
-    } else if (error.code === 'NotAuthorizedException') {
-      errorMessage = '이메일 또는 비밀번호가 올바르지 않습니다.';
-      statusCode = 401;
-    } else if (error.code === 'UserNotFoundException') {
-      errorMessage = '등록되지 않은 사용자입니다.';
-      statusCode = 404;
+    // 에러 객체에 code 속성이 있는지 확인
+    if (error && typeof error === 'object' && 'code' in error) {
+      const cognitoError = error as { code: string; message?: string };
+      
+      if (cognitoError.code === 'UserNotConfirmedException') {
+        errorMessage = '이메일 인증이 필요합니다.';
+        statusCode = 401;
+      } else if (cognitoError.code === 'NotAuthorizedException') {
+        errorMessage = '이메일 또는 비밀번호가 올바르지 않습니다.';
+        statusCode = 401;
+      } else if (cognitoError.code === 'UserNotFoundException') {
+        errorMessage = '등록되지 않은 사용자입니다.';
+        statusCode = 404;
+      }
+      
+      return NextResponse.json(
+        { message: errorMessage, code: cognitoError.code },
+        { status: statusCode }
+      );
     }
     
     return NextResponse.json(
-      { message: errorMessage, code: error.code },
+      { message: errorMessage },
       { status: statusCode }
     );
   }

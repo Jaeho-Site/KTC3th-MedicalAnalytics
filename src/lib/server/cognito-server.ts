@@ -41,20 +41,6 @@ export async function verifyToken(token: string) {
   }
 }
 
-// Cognito 세션 타입 정의
-interface CognitoSession {
-  isValid(): boolean;
-  getIdToken(): {
-    getJwtToken(): string;
-  };
-  getAccessToken(): {
-    getJwtToken(): string;
-  };
-  getRefreshToken(): {
-    getToken(): string;
-  };
-}
-
 // Cognito 인증 결과 타입 정의
 interface CognitoAuthResult {
   getIdToken(): {
@@ -102,12 +88,12 @@ export const cognitoServerService = {
               // 프로덕션 환경에서는 민감한 정보 로깅 제한
               if (process.env.NODE_ENV === 'development') {
                 console.error('SignUp Error:', {
-                  code: (err as any).code,
+                  code: err && typeof err === 'object' && 'code' in err ? (err as { code: string }).code : 'UNKNOWN',
                   message: err.message,
                   name: err.name
                 });
               } else {
-                console.error('SignUp Error:', (err as any).code || err.name);
+                console.error('SignUp Error:', err && typeof err === 'object' && 'code' in err ? (err as { code: string }).code : err.name);
               }
               reject(err);
               return;

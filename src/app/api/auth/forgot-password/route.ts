@@ -21,28 +21,38 @@ export async function POST(request: NextRequest) {
       destination: result.CodeDeliveryDetails.Destination,
       message: '비밀번호 재설정 코드가 이메일로 전송되었습니다.'
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
 
     // 에러 메시지 처리
     let errorMessage = '비밀번호 재설정 요청 중 오류가 발생했습니다.';
     let statusCode = 500;
     
-    if (error.code === 'UserNotFoundException') {
-      // 보안을 위해 사용자가 존재하지 않아도 성공 메시지 반환
-      return NextResponse.json({
-        success: true,
-        message: '비밀번호 재설정 코드가 이메일로 전송되었습니다.'
-      });
-    } else if (error.code === 'LimitExceededException') {
-      errorMessage = '요청 횟수가 제한을 초과했습니다. 잠시 후 다시 시도해주세요.';
-      statusCode = 429;
-    } else if (error.code === 'InvalidParameterException') {
-      errorMessage = '유효하지 않은 이메일 형식입니다.';
-      statusCode = 400;
+    // 에러 객체에 code 속성이 있는지 확인
+    if (error && typeof error === 'object' && 'code' in error) {
+      const cognitoError = error as { code: string; message?: string };
+      
+      if (cognitoError.code === 'UserNotFoundException') {
+        // 보안을 위해 사용자가 존재하지 않아도 성공 메시지 반환
+        return NextResponse.json({
+          success: true,
+          message: '비밀번호 재설정 코드가 이메일로 전송되었습니다.'
+        });
+      } else if (cognitoError.code === 'LimitExceededException') {
+        errorMessage = '요청 횟수가 제한을 초과했습니다. 잠시 후 다시 시도해주세요.';
+        statusCode = 429;
+      } else if (cognitoError.code === 'InvalidParameterException') {
+        errorMessage = '유효하지 않은 이메일 형식입니다.';
+        statusCode = 400;
+      }
+      
+      return NextResponse.json(
+        { message: errorMessage, code: cognitoError.code },
+        { status: statusCode }
+      );
     }
     
     return NextResponse.json(
-      { message: errorMessage, code: error.code },
+      { message: errorMessage },
       { status: statusCode }
     );
   }

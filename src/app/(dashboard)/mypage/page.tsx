@@ -29,12 +29,6 @@ const validateUsername = (username: string): boolean => {
   return /^[\w가-힣\s]{2,30}$/.test(username);
 };
 
-// 사용자 폼 데이터 타입 정의
-interface UserFormData {
-  username?: string;
-  [key: string]: any;
-}
-
 // 파일을 Base64로 변환하는 유틸리티 함수
 const convertFileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -61,7 +55,6 @@ export default function MyPage() {
   const [username, setUsername] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [updateLoading, setUpdateLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   
   // 프로필 이미지 관련 상태
   const [profileImage, setProfileImage] = useState<string | null>(null); // S3 URL (DynamoDB에 저장됨)
@@ -108,7 +101,7 @@ export default function MyPage() {
           try {
             const errorData = await response.json();
             throw new Error(errorData.message || 'PreSignedURL을 가져오는데 실패했습니다.');
-          } catch (jsonError) {
+          } catch {
             // JSON 파싱 오류 시 기본 메시지 사용
             throw new Error(`PreSignedURL을 가져오는데 실패했습니다. (상태 코드: ${response.status})`);
           }
@@ -134,8 +127,8 @@ export default function MyPage() {
         }
         throw fetchError;
       }
-    } catch (err) {
-      // 이미지 URL 조회 실패는 치명적인 오류가 아니므로 null 반환
+    } catch {
+ 
       return null;
     } finally {
       setImageLoading(false);
@@ -185,7 +178,7 @@ export default function MyPage() {
           try {
             const errorData = await response.json();
             throw new Error(errorData.message || '사용자 정보를 가져오는데 실패했습니다.');
-          } catch (jsonError) {
+          } catch {
             // JSON 파싱 오류 시 기본 메시지 사용
             throw new Error(`사용자 정보를 가져오는데 실패했습니다. (상태 코드: ${response.status})`);
           }
@@ -321,13 +314,12 @@ export default function MyPage() {
           try {
             const errorData = await response.json();
             throw new Error(errorData.message || '사용자 정보 업데이트에 실패했습니다.');
-          } catch (jsonError) {
+          } catch {
             // JSON 파싱 오류 시 기본 메시지 사용
             throw new Error(`사용자 정보 업데이트에 실패했습니다. (상태 코드: ${response.status})`);
           }
         }
-        
-        const data = await response.json();       
+             
         // 편집 모드 종료
         setIsEditing(false);   
         // 업데이트된 사용자 정보 다시 가져오기
@@ -410,12 +402,11 @@ export default function MyPage() {
           try {
             const errorData = await response.json();
             throw new Error(errorData.message || '프로필 이미지 업로드에 실패했습니다.');
-          } catch (jsonError) {
+          } catch {
             // JSON 파싱 오류 시 기본 메시지 사용
             throw new Error(`프로필 이미지 업로드에 실패했습니다. (상태 코드: ${response.status})`);
           }
-        }     
-        const data = await response.json();      
+        }        
         // 업데이트된 사용자 정보 다시 가져오기
         fetchUserInfo();
       } catch (fetchError) {

@@ -31,25 +31,25 @@ const safeLogError = (message: string, error?: Error | unknown) => {
   }
 };
 
-// JWT 디코딩 함수 (jwt-decode 라이브러리 대체)
-function decodeJwt(token: string) {
-  try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map(function (c) {
-          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        })
-        .join('')
-    );
-    return JSON.parse(jsonPayload);
-  } catch {
-    safeLogError('JWT 디코딩 오류');
-    return null;
-  }
-}
+// JWT 디코딩 함수 (현재 사용되지 않음)
+// function decodeJwt(token: string) {
+//   try {
+//     const base64Url = token.split('.')[1];
+//     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+//     const jsonPayload = decodeURIComponent(
+//       atob(base64)
+//         .split('')
+//         .map(function (c) {
+//           return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+//         })
+//         .join('')
+//     );
+//     return JSON.parse(jsonPayload);
+//   } catch {
+//     safeLogError('JWT 디코딩 오류');
+//     return null;
+//   }
+// }
 
 // 인증 컨텍스트에서 관리할 상태와 함수들의 타입 정의
 interface AuthContextType {
