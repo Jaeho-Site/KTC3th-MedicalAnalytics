@@ -2,25 +2,10 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
-import { cognitoService } from "@/lib/cognito";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Home() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const session = await cognitoService.getCurrentSession();
-        setIsAuthenticated(!!session);
-      } catch (error) {
-        console.error('Auth Check Error:', error);
-        setIsAuthenticated(false);
-      }
-    };
-
-    checkAuth();
-  }, []);
+  const { isAuthenticated } = useAuth();
 
   return (
     <div className="min-h-screen">

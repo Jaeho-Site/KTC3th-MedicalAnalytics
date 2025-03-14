@@ -85,7 +85,6 @@ export default function Dashboard() {
       
       setShowResults(true);
     } catch (err: unknown) {
-      console.error('분석 오류:', err);
       const errorMessage = err instanceof Error ? err.message : '알약 이미지 분석 중 오류가 발생했습니다. 다시 시도해주세요.';
       setError(errorMessage);
     } finally {

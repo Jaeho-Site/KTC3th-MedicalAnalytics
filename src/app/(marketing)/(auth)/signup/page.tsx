@@ -3,7 +3,7 @@
 import { useState, Suspense, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { CognitoError } from '@/lib/cognito';
+import { AuthError } from '@/lib/auth-types';
 import { useAuth } from '@/contexts/AuthContext';
 
 const SignUpContent = () => {
@@ -46,8 +46,8 @@ const SignUpContent = () => {
       // 비밀번호는 컨텍스트에 저장되므로 URL에 포함하지 않음
       router.push(`/verify-email?email=${encodeURIComponent(formData.email)}`);
     } catch (err: unknown) {
-      const cognitoError = err as CognitoError;
-      setError(cognitoError.message || '회원가입 중 오류가 발생했습니다.');
+      const authError = err as AuthError;
+      setError(authError.message || '회원가입 중 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }

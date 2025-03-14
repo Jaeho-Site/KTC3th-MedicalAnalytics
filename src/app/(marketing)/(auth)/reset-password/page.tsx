@@ -3,7 +3,7 @@
 import { useState, Suspense, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { CognitoError } from '@/lib/cognito';
+import { AuthError } from '@/lib/auth-types';
 import { useAuth } from '@/contexts/AuthContext';
 
 const ResetPasswordContent = () => {
@@ -40,9 +40,8 @@ const ResetPasswordContent = () => {
         router.push('/login');
       }
     } catch (err: unknown) {
-      const cognitoError = err as CognitoError;
-      console.error('Reset Password Error:', cognitoError);
-      setError(cognitoError.message || '오류가 발생했습니다.');
+      const authError = err as AuthError;
+      setError(authError.message || '오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }

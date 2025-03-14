@@ -1,45 +1,15 @@
 'use client';
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { cognitoService } from '@/lib/cognito';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Header = () => {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  const checkAuth = async () => {
-    try {
-      const session = await cognitoService.getCurrentSession();
-      setIsAuthenticated(!!session);
-    } catch (error) {
-      console.error('Auth Check Error:', error);
-      setIsAuthenticated(false);
-    }
-  };
-
-  useEffect(() => {
-    // 초기 인증 상태 확인
-    checkAuth();
-
-    // 로그인 상태 변경 감지를 위한 이벤트 리스너
-    const handleAuthChange = () => {
-      checkAuth();
-    };
-
-    window.addEventListener('auth-change', handleAuthChange);
-    window.addEventListener('storage', handleAuthChange);
-
-    return () => {
-      window.removeEventListener('auth-change', handleAuthChange);
-      window.removeEventListener('storage', handleAuthChange);
-    };
-  }, []);
+  const { isAuthenticated, logout } = useAuth();
 
   const handleSignOut = async () => {
-    await cognitoService.signOut();
-    setIsAuthenticated(false);
+    await logout();
     router.push('/login');
   };
 
