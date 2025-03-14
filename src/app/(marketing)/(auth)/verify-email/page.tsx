@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { CognitoError } from '@/lib/cognito';
+import { AuthError } from '@/lib/auth-types';
 
 const VerifyEmailContent = () => {
   const router = useRouter();
@@ -44,8 +44,8 @@ const VerifyEmailContent = () => {
         router.push('/login?verified=true');
       }, 3000);
     } catch (err: unknown) {
-      const cognitoError = err as CognitoError;
-      setError(cognitoError.message || '인증 코드 확인에 실패했습니다.');
+      const authError = err as AuthError;
+      setError(authError.message || '인증 코드 확인에 실패했습니다.');
     } finally {
       setLoading(false);
     }

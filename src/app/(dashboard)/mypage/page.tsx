@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 // API 엔드포인트 - 환경 변수 사용
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+const API_BASE_URL = '/api/proxy'; // 내부 프록시 API 사용
 const USER_API_URL = `${API_BASE_URL}/user`;
 const PROFILE_IMAGE_API_URL = `${API_BASE_URL}/user/profile-image`;
 const GET_IMAGE_API_URL = `${API_BASE_URL}/user/get-image`;
@@ -28,14 +29,39 @@ const validateUsername = (username: string): boolean => {
   return /^[\w가-힣\s]{2,30}$/.test(username);
 };
 
+// 사용자 폼 데이터 타입 정의
+interface UserFormData {
+  username?: string;
+  [key: string]: any;
+}
+
+// 파일을 Base64로 변환하는 유틸리티 함수
+const convertFileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result);
+      } else {
+        reject(new Error('파일을 Base64로 변환하는데 실패했습니다.'));
+      }
+    };
+    reader.onerror = () => {
+      reject(new Error('파일 읽기 오류가 발생했습니다.'));
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
 export default function MyPage() {
-  const { user, isAuthenticated, isLoading, getAuthToken } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [username, setUsername] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [updateLoading, setUpdateLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   
   // 프로필 이미지 관련 상태
   const [profileImage, setProfileImage] = useState<string | null>(null); // S3 URL (DynamoDB에 저장됨)
@@ -43,18 +69,18 @@ export default function MyPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   // PreSignedURL 가져오기 함수
-  const getPresignedUrl = async (imageUrl: string) => {
+  const getProfileImageUrl = async (imageUrl: string) => {
     if (!imageUrl) return null;
     
     try {
       setImageLoading(true);
       
-      // 인증 토큰 가져오기
-      const token = await getAuthToken();
-      if (!token) {
-        throw new Error('인증 토큰을 가져올 수 없습니다.');
+      // API 기본 URL이 설정되어 있는지 확인
+      if (!API_BASE_URL) {
+        return null;
       }
       
       // 이미지 키 추출
@@ -63,49 +89,65 @@ export default function MyPage() {
         throw new Error('이미지 키를 추출할 수 없습니다.');
       }
       
-      // API를 통해 PreSignedURL 가져오기
-      const response = await fetch(`${GET_IMAGE_API_URL}?key=${encodeURIComponent(imageKey)}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
+      try {
+        // API를 통해 PreSignedURL 가져오기
+        const response = await fetch(`${GET_IMAGE_API_URL}?key=${encodeURIComponent(imageKey)}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          credentials: 'include' // 쿠키를 포함하여 인증 정보 전송
+        });
+        
+        if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.');
+          }
+          
+          // 응답 본문 가져오기 시도
+          try {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'PreSignedURL을 가져오는데 실패했습니다.');
+          } catch (jsonError) {
+            // JSON 파싱 오류 시 기본 메시지 사용
+            throw new Error(`PreSignedURL을 가져오는데 실패했습니다. (상태 코드: ${response.status})`);
+          }
         }
-      });
-      
-      if (!response.ok) {
-        throw new Error('PreSignedURL을 가져오는데 실패했습니다.');
+        
+        const data = await response.json();
+        
+        if (!data.presignedUrl && !data.url) {
+          throw new Error('이미지 URL이 없습니다.');
+        }
+        
+        // 현재 시간 + 만료 시간 (초)
+        const expiresAt = Date.now() + ((data.expiresIn || 3600) * 1000);
+        
+        return {
+          url: data.presignedUrl || data.url,
+          expiresAt
+        };
+      } catch (fetchError) {
+        // fetch 자체의 네트워크 오류 처리
+        if (fetchError instanceof TypeError && fetchError.message.includes('Failed to fetch')) {
+          throw new Error('서버에 연결할 수 없습니다. 네트워크 연결을 확인하거나 나중에 다시 시도해주세요.');
+        }
+        throw fetchError;
       }
-      
-      const data = await response.json();
-      
-      if (!data.presignedUrl) {
-        throw new Error('PreSignedURL이 없습니다.');
-      }
-      
-      // 현재 시간 + 만료 시간 (초)
-      const expiresAt = Date.now() + (data.expiresIn * 1000);
-      
-      return {
-        url: data.presignedUrl,
-        expiresAt
-      };
     } catch (err) {
-      console.error('PreSignedURL 가져오기 오류:', err);
+      // 이미지 URL 조회 실패는 치명적인 오류가 아니므로 null 반환
       return null;
     } finally {
       setImageLoading(false);
     }
   };
 
-  // 이미지 URL이 만료되었는지 확인하는 함수
-  const isUrlExpired = (urlInfo: PresignedUrlInfo | null): boolean => {
-    if (!urlInfo) return true;
-    return Date.now() >= urlInfo.expiresAt;
-  };
-
-  // 사용자 정보 가져오기 함수
+  // 사용자 정보 가져오기
   const fetchUserInfo = async () => {
     if (!isAuthenticated || !user?.email) {
       setLoading(false);
+      // 인증되지 않은 경우 로그인 페이지로 리디렉션
+      router.push('/login');
       return;
     }
     
@@ -113,50 +155,80 @@ export default function MyPage() {
       setLoading(true);
       setError(null);
       
-      // 인증 토큰 가져오기
-      const token = await getAuthToken();
-      if (!token) {
-        throw new Error('인증 토큰을 가져올 수 없습니다.');
+      // API 기본 URL이 설정되어 있는지 확인
+      if (!API_BASE_URL) {
+        throw new Error('API 기본 URL이 설정되지 않았습니다. 환경 변수를 확인해주세요.');
       }
       
-      const response = await fetch(
-        `${USER_API_URL}?email=${encodeURIComponent(user.email)}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+      try {
+        const response = await fetch(
+          `${USER_API_URL}?email=${encodeURIComponent(user.email)}`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            credentials: 'include' // 쿠키를 포함하여 인증 정보 전송
+          }
+        );
+        if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            // 인증 오류 발생 시 로그인 페이지로 리디렉션
+            setError('인증이 만료되었습니다. 다시 로그인해주세요.');
+            setTimeout(() => {
+              router.push('/login');
+            }, 2000); // 2초 후 리디렉션
+            return;
+          }
+          
+          // 응답 본문 가져오기 시도
+          try {
+            const errorData = await response.json();
+            throw new Error(errorData.message || '사용자 정보를 가져오는데 실패했습니다.');
+          } catch (jsonError) {
+            // JSON 파싱 오류 시 기본 메시지 사용
+            throw new Error(`사용자 정보를 가져오는데 실패했습니다. (상태 코드: ${response.status})`);
           }
         }
-      );
-      
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.');
-        }
-        throw new Error('사용자 정보를 가져오는데 실패했습니다.');
-      }
-      
-      const data = await response.json();
-   
-      setUserInfo(data);
-      setUsername(data.Username || '');
-      
-      // 프로필 이미지가 있으면 설정
-      if (data.profileImage) {
-        setProfileImage(data.profileImage);
         
-        // PreSignedURL 가져오기
-        const urlInfo = await getPresignedUrl(data.profileImage);
-        if (urlInfo) {
-          setPresignedUrl(urlInfo);
+        const data = await response.json();
+       
+        setUserInfo(data);
+        setUsername(data.Username || '');
+        
+        // 프로필 이미지가 있으면 설정
+        if (data.profileImage) {
+          setProfileImage(data.profileImage);
+          
+          // PreSignedURL 가져오기
+          const urlInfo = await getProfileImageUrl(data.profileImage);
+          if (urlInfo) {
+            setPresignedUrl(urlInfo);
+          }
         }
+      } catch (fetchError) {
+        // fetch 자체의 네트워크 오류 처리
+        if (fetchError instanceof TypeError && fetchError.message.includes('Failed to fetch')) {
+          throw new Error('서버에 연결할 수 없습니다. 네트워크 연결을 확인하거나 나중에 다시 시도해주세요.');
+        }
+        throw fetchError;
       }
     } catch (err) {
-      console.error('사용자 정보 조회 오류');
       
-      if (err instanceof Error && (err.message.includes('인증이 만료') || err.message.includes('인증 토큰'))) {
-        setError('인증이 만료되었습니다. 다시 로그인해주세요.');
+      if (err instanceof Error) {
+        if (err.message.includes('인증이 만료') || err.message.includes('인증 토큰')) {
+          setError('인증이 만료되었습니다. 다시 로그인해주세요.');
+          // 인증 오류 발생 시 로그인 페이지로 리디렉션
+          setTimeout(() => {
+            router.push('/login');
+          }, 2000); // 2초 후 리디렉션
+        } else if (err.message.includes('API 기본 URL')) {
+          setError('애플리케이션 설정 오류: API URL이 설정되지 않았습니다. 관리자에게 문의하세요.');
+        } else if (err.message.includes('서버에 연결할 수 없습니다')) {
+          setError('서버에 연결할 수 없습니다. 네트워크 연결을 확인하거나 나중에 다시 시도해주세요.');
+        } else {
+          setError(err.message);
+        }
       } else {
         setError('사용자 정보를 가져오는데 실패했습니다.');
       }
@@ -178,7 +250,7 @@ export default function MyPage() {
   useEffect(() => {
     // 이미지 URL이 있고 PreSignedURL이 만료되었으면 갱신
     if (profileImage && isUrlExpired(presignedUrl)) {
-      getPresignedUrl(profileImage).then(urlInfo => {
+      getProfileImageUrl(profileImage).then(urlInfo => {
         if (urlInfo) {
           setPresignedUrl(urlInfo);
         }
@@ -188,7 +260,7 @@ export default function MyPage() {
     // 주기적으로 PreSignedURL 만료 체크 (5분마다)
     const checkInterval = setInterval(() => {
       if (profileImage && isUrlExpired(presignedUrl)) {
-        getPresignedUrl(profileImage).then(urlInfo => {
+        getProfileImageUrl(profileImage).then(urlInfo => {
           if (urlInfo) {
             setPresignedUrl(urlInfo);
           }
@@ -222,166 +294,174 @@ export default function MyPage() {
     setError(null);
     
     try {
-      // 인증 토큰 가져오기
-      const token = await getAuthToken();
-      if (!token) {
-        throw new Error('인증 토큰을 가져올 수 없습니다.');
+      // API 기본 URL이 설정되어 있는지 확인
+      if (!API_BASE_URL) {
+        throw new Error('API 기본 URL이 설정되지 않았습니다. 환경 변수를 확인해주세요.');
       }
       
-      // 사용자 이름 업데이트
-      const response = await fetch(
-        USER_API_URL,
-        {
+      try {
+        const response = await fetch(USER_API_URL, {
           method: 'PUT',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify({
             email: user.email,
             Username: username
-          })
+          }),
+          credentials: 'include' // 쿠키를 포함하여 인증 정보 전송
+        });
+        
+        if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.');
+          }
+          
+          // 응답 본문 가져오기 시도
+          try {
+            const errorData = await response.json();
+            throw new Error(errorData.message || '사용자 정보 업데이트에 실패했습니다.');
+          } catch (jsonError) {
+            // JSON 파싱 오류 시 기본 메시지 사용
+            throw new Error(`사용자 정보 업데이트에 실패했습니다. (상태 코드: ${response.status})`);
+          }
         }
-      );
-      
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.');
-        }
-        throw new Error('사용자 이름 업데이트에 실패했습니다.');
-      }
-      
-      const data = await response.json();
-      
-      // 성공 처리
-      setUserInfo(prev => prev ? { ...prev, Username: data.Username } : null);
-      setIsEditing(false);
-      
-      // 업데이트된 정보 다시 불러오기
-      setTimeout(() => {
+        
+        const data = await response.json();       
+        // 편집 모드 종료
+        setIsEditing(false);   
+        // 업데이트된 사용자 정보 다시 가져오기
         fetchUserInfo();
-      }, 1000);
-      
-    } catch (err) {
-      console.error('사용자 정보 업데이트 오류');
-      
-      if (err instanceof Error && (err.message.includes('인증이 만료') || err.message.includes('인증 토큰'))) {
-        setError('인증이 만료되었습니다. 다시 로그인해주세요.');
+      } catch (fetchError) {
+        // fetch 자체의 네트워크 오류 처리
+        if (fetchError instanceof TypeError && fetchError.message.includes('Failed to fetch')) {
+          throw new Error('서버에 연결할 수 없습니다. 네트워크 연결을 확인하거나 나중에 다시 시도해주세요.');
+        }
+        throw fetchError;
+      }
+    } catch (err) {    
+      if (err instanceof Error) {
+        if (err.message.includes('인증이 만료') || err.message.includes('인증 토큰')) {
+          setError('인증이 만료되었습니다. 다시 로그인해주세요.');
+        } else if (err.message.includes('API 기본 URL')) {
+          setError('애플리케이션 설정 오류: API URL이 설정되지 않았습니다. 관리자에게 문의하세요.');
+        } else if (err.message.includes('서버에 연결할 수 없습니다')) {
+          setError('서버에 연결할 수 없습니다. 네트워크 연결을 확인하거나 나중에 다시 시도해주세요.');
+        } else {
+          setError(err.message);
+        }
       } else {
-        setError('사용자 정보 업데이트에 실패했습니다.');
+        setError('사용자 정보 업데이트 중 오류가 발생했습니다.');
       }
     } finally {
       setUpdateLoading(false);
     }
   };
   
-  // 이미지 파일 선택 및 업로드 핸들러
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !isAuthenticated || !user?.email) return;
+  // 프로필 이미지 업로드 핸들러
+  const handleProfileImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0 || !isAuthenticated || !user?.email) return;
     
-    // 파일 크기 검증 (5MB 제한)
+    const file = e.target.files[0];
+    
+    // 파일 크기 제한 (5MB)
     if (file.size > 5 * 1024 * 1024) {
-      setError('이미지 크기는 5MB 이하여야 합니다.');
+      setError('이미지 크기는 5MB를 초과할 수 없습니다.');
       return;
     }
     
-    // 파일 형식 검증
+    // 이미지 파일 타입 검증
     if (!file.type.startsWith('image/')) {
-      setError('이미지 파일만 업로드 가능합니다.');
+      setError('이미지 파일만 업로드할 수 있습니다.');
       return;
     }
+    
+    setIsUploading(true);
+    setError(null);
     
     try {
-      setIsUploading(true);
-      setError(null);
-      
-      // 파일을 Base64로 변환
-      const reader = new FileReader();
-      
-      reader.onloadend = async () => {
-        try {
-          const imageData = reader.result;
-         
-          // 이미지 업로드 요청
-          const response = await fetch(PROFILE_IMAGE_API_URL, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              email: user.email,
-              image: imageData
-            })
-          });                    
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || '이미지 업로드에 실패했습니다.');
-          }
-          
-          const data = await response.json();
-          
-          if (data.imageUrl) {
-            // S3 URL 저장 (DynamoDB에 저장된 URL)
-            setProfileImage(data.imageUrl);
-            
-            // PreSignedURL 저장 (실제 이미지 접근에 사용)
-            if (data.presignedUrl) {
-              const expiresAt = Date.now() + (data.expiresIn * 1000);
-              setPresignedUrl({
-                url: data.presignedUrl,
-                expiresAt
-              });
-            } else {
-              // 서버에서 PreSignedURL을 반환하지 않으면 직접 가져오기
-              const urlInfo = await getPresignedUrl(data.imageUrl);
-              if (urlInfo) {
-                setPresignedUrl(urlInfo);
-              }
-            }
-            
-            // 사용자 정보 업데이트
-            setUserInfo(prev => prev ? { ...prev, profileImage: data.imageUrl } : null);
-            
-            // 최신 정보 가져오기
-            await fetchUserInfo();
-          } else {
-            throw new Error('이미지 URL을 받지 못했습니다.');
-          }
-        } catch (error) {
-          console.error('업로드 오류:', error);
-          if (error instanceof Error) {
-            setError(error.message);
-          } else {
-            setError('이미지 업로드에 실패했습니다.');
-          }
-        } finally {
-          setIsUploading(false);
-        }
-      };
-      
-      reader.onerror = () => {
-        console.error('파일 읽기 오류');
-        setError('이미지 파일을 읽는데 실패했습니다.');
-        setIsUploading(false);
-      };
-      
-      reader.readAsDataURL(file);
-      
-    } catch (error) {
-      console.error('일반 오류:', error);
-      if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError('이미지 처리 중 오류가 발생했습니다.');
+      // API 기본 URL이 설정되어 있는지 확인
+      if (!API_BASE_URL) {
+        throw new Error('API 기본 URL이 설정되지 않았습니다. 환경 변수를 확인해주세요.');
       }
+      
+      // 파일을 base64로 변환
+      const base64Image = await convertFileToBase64(file);
+      
+      try {
+        const response = await fetch(PROFILE_IMAGE_API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            email: user.email,
+            image: base64Image
+          }),
+          credentials: 'include' // 쿠키를 포함하여 인증 정보 전송
+        });
+        
+        if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.');
+          }
+          
+          // 응답 본문 가져오기 시도
+          try {
+            const errorData = await response.json();
+            throw new Error(errorData.message || '프로필 이미지 업로드에 실패했습니다.');
+          } catch (jsonError) {
+            // JSON 파싱 오류 시 기본 메시지 사용
+            throw new Error(`프로필 이미지 업로드에 실패했습니다. (상태 코드: ${response.status})`);
+          }
+        }     
+        const data = await response.json();      
+        // 업데이트된 사용자 정보 다시 가져오기
+        fetchUserInfo();
+      } catch (fetchError) {
+        // fetch 자체의 네트워크 오류 처리
+        if (fetchError instanceof TypeError && fetchError.message.includes('Failed to fetch')) {
+          throw new Error('서버에 연결할 수 없습니다. 네트워크 연결을 확인하거나 나중에 다시 시도해주세요.');
+        }
+        throw fetchError;
+      }
+    } catch (err) {
+      
+      if (err instanceof Error) {
+        if (err.message.includes('인증이 만료') || err.message.includes('인증 토큰')) {
+          setError('인증이 만료되었습니다. 다시 로그인해주세요.');
+        } else if (err.message.includes('API 기본 URL')) {
+          setError('애플리케이션 설정 오류: API URL이 설정되지 않았습니다. 관리자에게 문의하세요.');
+        } else if (err.message.includes('서버에 연결할 수 없습니다')) {
+          setError('서버에 연결할 수 없습니다. 네트워크 연결을 확인하거나 나중에 다시 시도해주세요.');
+        } else {
+          setError(err.message);
+        }
+      } else {
+        setError('프로필 이미지 업로드 중 오류가 발생했습니다.');
+      }
+    } finally {
       setIsUploading(false);
+      // 파일 입력 초기화
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
+  // 에러 메시지 초기화
+  const clearError = () => {
+    setError(null);
+  };
   // 로그인 페이지로 이동
   const goToLogin = () => {
-    window.location.href = '/login';
+    router.push('/login');
+  };
+
+  // 이미지 URL이 만료되었는지 확인하는 함수
+  const isUrlExpired = (urlInfo: PresignedUrlInfo | null): boolean => {
+    if (!urlInfo) return true;
+    return Date.now() >= urlInfo.expiresAt;
   };
 
   if (isLoading) {
@@ -425,7 +505,7 @@ export default function MyPage() {
           {error}
           <div className="mt-2">
             <button
-              onClick={() => setError(null)}
+              onClick={clearError}
               className="px-3 py-1 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
             >
               닫기
@@ -433,7 +513,6 @@ export default function MyPage() {
           </div>
         </div>
       )}
-      
       {userInfo && (
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="p-6">
@@ -483,7 +562,7 @@ export default function MyPage() {
                 <input
                   type="file"
                   ref={fileInputRef}
-                  onChange={handleImageUpload}
+                  onChange={handleProfileImageUpload}
                   accept="image/*"
                   className="hidden"
                 />

@@ -1,5 +1,35 @@
 import { CognitoUserPool, CognitoUser, AuthenticationDetails, CognitoUserAttribute, ISignUpResult } from 'amazon-cognito-identity-js';
+import { CognitoJwtVerifier } from 'aws-jwt-verify';
 
+// 서버 측에서만 사용되는 환경 변수
+const poolData = {
+  UserPoolId: process.env.COGNITO_USER_POOL_ID!,
+  ClientId: process.env.COGNITO_CLIENT_ID!
+};
+
+// 서버 측에서만 사용되는 Cognito 사용자 풀
+const userPool = new CognitoUserPool(poolData);
+
+// JWT 검증기 설정 - 서버 측에서 공통으로 사용할 검증기
+export const verifier = CognitoJwtVerifier.create({
+  userPoolId: process.env.COGNITO_USER_POOL_ID!,
+  clientId: process.env.COGNITO_CLIENT_ID!,
+  tokenUse: 'id',
+});
+
+// JWT 토큰 검증 함수 - 미들웨어와 API 라우트에서 공통으로 사용
+export async function verifyToken(token: string) {
+  try {
+    // Cognito의 JWKS를 사용하여 토큰 검증
+    const payload = await verifier.verify(token);
+    return { valid: true, payload };
+  } catch (error) {
+    console.error('Token verification failed:', error);
+    return { valid: false, error };
+  }
+}
+
+// Cognito 세션 타입 정의
 interface CognitoSession {
   isValid(): boolean;
   getIdToken(): {
@@ -12,18 +42,6 @@ interface CognitoSession {
     getToken(): string;
   };
 }
-
-export interface CognitoError extends Error {
-  code?: string;
-  statusCode?: number;
-}
-
-const poolData = {
-  UserPoolId: process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID!,
-  ClientId: process.env.NEXT_PUBLIC_COGNITO_CLIENT_ID!
-};
-
-export const userPool = new CognitoUserPool(poolData);
 
 // Cognito 인증 결과 타입 정의
 interface CognitoAuthResult {
@@ -47,7 +65,8 @@ interface ForgotPasswordResult {
   };
 }
 
-export const cognitoService = {
+// 서버 측 Cognito 서비스
+export const cognitoServerService = {
   // 회원가입
   signUp: (email: string, password: string): Promise<ISignUpResult> => {
     return new Promise((resolve, reject) => {
@@ -69,7 +88,7 @@ export const cognitoService = {
           (err: Error | undefined, result?: ISignUpResult) => {
             if (err) {
               console.error('SignUp Error:', {
-                code: (err as CognitoError).code,
+                code: (err as any).code,
                 message: err.message,
                 name: err.name
               });
@@ -103,8 +122,6 @@ export const cognitoService = {
 
       cognitoUser.authenticateUser(authenticationDetails, {
         onSuccess: (result) => {
-          // Cognito 세션 자체를 사용 (localStorage 사용 제거)
-          window.dispatchEvent(new Event('auth-change'));
           resolve(result);
         },
         onFailure: (err) => {
@@ -153,36 +170,7 @@ export const cognitoService = {
     });
   },
 
-  getCurrentSession: () => {
-    return new Promise<CognitoSession | null>((resolve, reject) => {
-      const user = userPool.getCurrentUser();
-      if (user) {
-        user.getSession((err: Error | null, session: CognitoSession) => {
-          if (err) {
-            console.error('Session error:', err);
-            reject(err);
-            return;
-          }
-          if (session.isValid()) {
-            resolve(session);
-          } else {
-            resolve(null);
-          }
-        });
-      } else {
-        resolve(null);
-      }
-    });
-  },
-
-  signOut: () => {
-    const user = userPool.getCurrentUser();
-    if (user) {
-      user.signOut();
-      window.dispatchEvent(new Event('auth-change'));
-    }
-  },
-
+  // 이메일 인증 확인
   confirmSignUp: (email: string, code: string): Promise<string> => {
     return new Promise((resolve, reject) => {
       const cognitoUser = new CognitoUser({
@@ -200,4 +188,4 @@ export const cognitoService = {
       });
     });
   }
-};
+}; 

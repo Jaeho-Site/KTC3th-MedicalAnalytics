@@ -4,13 +4,13 @@ import { useState, Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
-import { CognitoError } from '@/lib/cognito';
+import { AuthError } from '@/lib/auth-types';
 
 const LoginContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const verified = searchParams.get('verified');
-  const { login, error: authError, clearError } = useAuth();
+  const { login, clearError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -30,15 +30,15 @@ const LoginContent = () => {
       await login(email, password);
       router.push('/dashboard');
     } catch (err: unknown) {
-      const cognitoError = err as CognitoError;
+      const authError = err as AuthError;
       
-      if (cognitoError.code === 'UserNotConfirmedException') {
+      if (authError.code === 'UserNotConfirmedException') {
         // 이메일 인증이 필요한 경우 인증 페이지로 이동
         router.push(`/verify-email?email=${encodeURIComponent(email)}`);
         return;
       }
       
-      setError(cognitoError.message || '로그인에 실패했습니다.');
+      setError(authError.message || '로그인에 실패했습니다.');
     } finally {
       setLoading(false);
     }
