@@ -2,7 +2,7 @@
 
 ## 🏗 시스템 아키텍처
 
-![AWS 시스템 아키텍처](/public/README/images/AWS-Diagram.png)
+![AWS 시스템 아키텍처](/public/README/images/Diagram.png)
 
 시스템 아키텍처는 위 다이어그램과 같으며, 실제 구현에는 사용자 인증, 프로필 관리, 이미지 처리 등 다양한 기능을 위한 Lambda 함수들이 추가로 구현되어 있습니다.
 
