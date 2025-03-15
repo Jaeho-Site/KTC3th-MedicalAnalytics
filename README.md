@@ -23,10 +23,6 @@ MediScan은 모든 디바이스에서 완벽한 사용자 경험을 제공합니
   <img src="/public/README/images/signup.png" alt="회원가입" width="32%" />
 </div>
 
-<div align="center">
-  <img src="/public/README/images/Footer.png" alt="푸터" width="100%" />
-</div>
-
 ## 📌 프로젝트 소개
 
 ### 🎯 Marketing
